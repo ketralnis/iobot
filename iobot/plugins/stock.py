@@ -7,12 +7,12 @@ class Stock(TextPlugin, UtilityMixin):
     def rtsq(self, irc):
         data = self._get_data(irc.command_args)
         if data[1] != '0.00':
-            irc.say('The current price of %s is %s, as of %s EST.  '
+            irc.private_message('The current price of %s is %s, as of %s EST.  '
                     'A change of %s from the last business day.' %
                     (data[0][1:-1], data[1], data[3][1:-1], data[4]))
         else:
             s = 'I couldn\'t find a listing for %s' % symbol
-            irc.say(s)
+            irc.private_message(s)
 
     @plugin_command
     def howmany(self, irc):
@@ -30,7 +30,7 @@ class Stock(TextPlugin, UtilityMixin):
         num =  int(floor( (amount-tradecosts)/price))
         tradecosts = 14.0 / num
         breakevenprice = price + tradecosts
-        irc.say("At curr price of %4.2f for %s, "
+        irc.private_message("At curr price of %4.2f for %s, "
             "with %4.2f you can purchase %d shares"
             " with a breakeven price of %4.2f." % (
             price, symbol, amount, num,breakevenprice ) )

@@ -75,7 +75,7 @@ class BotTestCases(AsyncTestCase):
 
     def test_msg(self):
         chan, msg = "#hi", "i am the walrus"
-        self.bot.say(chan, msg)
+        self.bot.private_message(chan, msg)
         assert self.bot._stream.write.called
 
 
@@ -96,7 +96,7 @@ class BotTestCases(AsyncTestCase):
     def test_plugin_echo(self):
         class Echo(TextPlugin):
             def on_text(self, irc):
-                irc.say(irc.text)
+                irc.private_message(irc.text)
         self.bot.register_plugins(['echo'])
 
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi

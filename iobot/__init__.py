@@ -72,11 +72,11 @@ class IrcEvent(object):
         # save off remaining tokens
         self.stoks = stoks
 
-    def say(self, text, dest=None):
-        self._bot.say(dest or self.chan, text)
+    def private_message(self, text, dest=None):
+        self._bot.private_message(dest or self.chan, text)
 
     def error(self, text, dest=None):
-        self.say(dest or self.chan, "error: %s" % text)
+        self.private_message(dest or self.chan, "error: %s" % text)
 
 class IOBot(object):
     def __init__(
@@ -123,7 +123,7 @@ class IOBot(object):
     def join_channel(self, chan):
         self._write("JOIN :%s\r\n" % chan)
 
-    def say(self, dest, msg):
+    def private_message(self, dest, msg):
         """
         sends a message to a chan or user
         """
@@ -225,7 +225,7 @@ class IOBot(object):
                 plugin_method(irc)
         except:
             doc = "usage: %s %s" % (irc.command, plugin_method.__doc__)
-            irc.say(doc)
+            irc.private_message(doc)
 
     def _process_hooks(self, irc):
         if irc.server_cmd in self._irc_proto:

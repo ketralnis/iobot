@@ -5,6 +5,6 @@ class Echo(TextPlugin):
 
     @plugin_command
     def echo(self, irc):
-        irc.say("%s" % irc.command_args)
+        irc.private_message("%s" % irc.command_args)
 
 Plugin = Echo
