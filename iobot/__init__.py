@@ -31,9 +31,12 @@ class IrcObj(object):
     """
 
     def __init__(self, line, bot):
-        self.text = self.server_cmd = self.chan = self.nick = None
         self._bot = bot
         self.line = line
+        self.text = None
+        self.server_cmd = None
+        self.chan = None
+        self.nick = None
         self.command = None
         self.command_args = None
         self._parse_line(line)
@@ -117,15 +120,6 @@ class IOBot(object):
         # finally, connect.
         self._connect()
 
-    def hook(self, cmd, hook_f):
-        """
-        allows easy hooking of any raw irc protocol statement.  These will be
-        executed after the initial protocol parsing occurs.  Plugins can use this
-        to extend their reach lower into the protocol.
-        """
-        assert( cmd in self._irc_proto )
-        self._irc_proto[cmd].hooks.add(hook_f)
-
     def join_channel(self, chan):
         self._write("JOIN :%s\r\n" % chan)
 
@@ -135,11 +129,14 @@ class IOBot(object):
         """
         self._write("PRIVMSG {} :{}\r\n".format(dest, msg))
 
-    def load_plugin(self, plugin_name):
-        plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
-        module_info = imp.find_module(plugin_name, [plugin_path])
-        module = imp.load_module(plugin_name, *module_info)
-        return module.Plugin
+    def hook(self, cmd, hook_f):
+        """
+        allows easy hooking of any raw irc protocol statement.  These will be
+        executed after the initial protocol parsing occurs.  Plugins can use this
+        to extend their reach lower into the protocol.
+        """
+        assert( cmd in self._irc_proto )
+        self._irc_proto[cmd].hooks.add(hook_f)
 
     def register_plugins(self, plugin_names):
         """
@@ -159,6 +156,12 @@ class IOBot(object):
             for cmd in cmds:
                 self._plugins[cmd] = plugin
 
+    def load_plugin(self, plugin_name):
+        plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
+        module_info = imp.find_module(plugin_name, [plugin_path])
+        module = imp.load_module(plugin_name, *module_info)
+        return module.Plugin
+
     def _connect(self):
         logger.info('Connecting...')
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -173,8 +176,7 @@ class IOBot(object):
         self._next()
 
     def _parse_line(self, line):
-        irc = IrcObj(line, self)
-        return irc
+        return IrcObj(line, self)
 
     def _p_welcome(self, irc):
         if self._initial_chans:
