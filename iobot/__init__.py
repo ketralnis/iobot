@@ -106,6 +106,7 @@ class IOBot(object):
             'PING'    : IrcProtoCmd(self._p_ping),
             'JOIN'    : IrcProtoCmd(self._p_afterjoin),
             '401'     : IrcProtoCmd(self._p_nochan),
+            '001'     : IrcProtoCmd(self._p_welcome),
             }
         # build our user command list
         self.cmds = dict()
@@ -165,20 +166,22 @@ class IOBot(object):
         self._stream.connect((self.host, self.port), self._after_connect)
 
     def _after_connect(self):
+        logger.info('Connected!')
         self._write("NICK %s\r\n" % self.nick)
         self._write("USER %s 0 * :%s\r\n" % ("iobot", "iobot"))
-        logger.info('Connected!')
 
-        if self._initial_chans:
-            for c in self._initial_chans: self.joinchan(c)
-            del self._initial_chans
-        if self._on_ready:
-            self._on_ready()
         self._next()
 
     def _parse_line(self, line):
         irc = IrcObj(line, self)
         return irc
+
+    def _p_welcome(self, irc):
+        if self._initial_chans:
+            for c in self._initial_chans: self.joinchan(c)
+            del self._initial_chans
+        if self._on_ready:
+            self._on_ready()
 
     def _p_ping(self, irc):
         self._write("PONG %s\r\n" % irc.line[1])
@@ -251,7 +254,7 @@ def main():
         initial_chans = ['#iobot-test'],
         )
 
-    ib.register(['echo','stock'])
+    ib.register_plugins(['echo','stock'])
 
     IOLoop.instance().start()
 
