@@ -18,10 +18,10 @@ class IrcProtoCmd(object):
         self.hooks = set()
         self.actn = actn
 
-    def __call__(self, irc, ln):
-        self.actn(irc, ln)
+    def __call__(self, irc):
+        self.actn(irc)
         for h in self.hooks:
-            h(irc, ln)
+            h(irc)
 
 renick = re.compile("^(\w*?)!")
 
@@ -42,9 +42,7 @@ class IrcObj(object):
         return ('<IrcObj object with line: \'%s\' and command: \'%s\'>' %
                 (self.line, self.command))
 
-
     def _parse_line(self, line):
-
         if not line.startswith(":"):
             # PING most likely
             stoks = line.split()
@@ -180,33 +178,31 @@ class IOBot(object):
 
     def _parse_line(self, line):
         irc = IrcObj(line, self)
-        if irc.server_cmd in self._irc_proto:
-            self._irc_proto[irc.server_cmd](irc, line)
         return irc
 
-    def _p_ping(self, irc, line):
-        self._write("PONG %s\r\n" % line[1])
+    def _p_ping(self, irc):
+        self._write("PONG %s\r\n" % irc.line[1])
 
-    def _p_privmsg(self, irc, line):
+    def _p_privmsg(self, irc):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
-        toks = line[1:].split(':')[0].split()
+        toks = irc.line[1:].split(':')[0].split()
         irc.chan = toks[-1] # should be last token after last :
-        irc.text = line[line.find(':',1)+1:].strip()
+        irc.text = irc.line[irc.line.find(':',1)+1:].strip()
         if irc.text and irc.text.startswith(self.char):
             text_split = irc.text.split()
             irc.command = text_split[0][1:]
             irc.command_args = ' '.join(text_split[1:])
 
-    def _p_afterjoin(self, irc, line):
-        toks = line.strip().split(':')
+    def _p_afterjoin(self, irc):
+        toks = irc.line.strip().split(':')
         if irc.nick != self.nick:
             return # we don't care right now if others join
         irc.chan = toks[-1] # should be last token after last :
         self.chans.add(irc.chan)
 
-    def _p_nochan(self, irc, line):
+    def _p_nochan(self, irc):
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
-        toks = line.strip().split(':')
+        toks = irc.line.strip().split(':')
         irc.chan = toks[1].strip().split()[-1]
         if irc.chan in self.chans: self.chans.remove(irc.chan)
 
@@ -226,6 +222,10 @@ class IOBot(object):
             doc = "usage: %s %s" % (irc.command, plugin_method.__doc__)
             irc.say(doc)
 
+    def _process_hooks(self, irc):
+        if irc.server_cmd in self._irc_proto:
+            self._irc_proto[irc.server_cmd](irc)
+
     def _write(self, line):
         logger.debug('Writing: %s' % line)
         self._stream.write(line)
@@ -236,7 +236,9 @@ class IOBot(object):
 
     def _incoming(self, line):
         logger.debug('Read: %s' % line)
-        self._process_plugins(self._parse_line(line))
+        irc = self._parse_line(line)
+        self._process_hooks(irc)
+        self._process_plugins(irc)
         self._next()
 
 def main():

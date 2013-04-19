@@ -50,7 +50,7 @@ class BotTestCases(AsyncTestCase):
     def test_ping(self):
         # going to fake a PING from the server on this one
         self._was_pinged = False
-        self.bot.hook('PING', lambda irc, ln: self.stop(True))
+        self.bot.hook('PING', lambda irc: self.stop(True))
         self.rawircin('PING :12345')
         assert self.wait()
         assert self.bot._stream.write.called
