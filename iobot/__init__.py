@@ -123,6 +123,9 @@ class IOBot(object):
     def join_channel(self, chan):
         self._write("JOIN :%s\r\n" % chan)
 
+    def part_channel(self, chan):
+        self._write("PART :%s\r\n" % chan)
+
     def private_message(self, dest, msg):
         """
         sends a message to a chan or user

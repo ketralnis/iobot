@@ -61,6 +61,13 @@ class BotTestCases(AsyncTestCase):
         self.bot.join_channel(chan)
         assert self.bot._stream.write.called_with("JOIN :{}".format(chan))
 
+    def test_part(self):
+        # testing these together
+        chan = '#testchan'
+        self.bot.part_channel(chan)
+        assert self.bot._stream.write.called_with("PART :{}".format(chan))
+
+
     def test_parse_join(self):
         chan = '#testchan'
         # fake irc response to our join
