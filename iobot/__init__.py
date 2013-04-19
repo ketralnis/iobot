@@ -126,7 +126,7 @@ class IOBot(object):
         assert( cmd in self._irc_proto )
         self._irc_proto[cmd].hooks.add(hook_f)
 
-    def joinchan(self, chan):
+    def join_channel(self, chan):
         self._write("JOIN :%s\r\n" % chan)
 
     def say(self, dest, msg):
@@ -178,7 +178,7 @@ class IOBot(object):
 
     def _p_welcome(self, irc):
         if self._initial_chans:
-            for c in self._initial_chans: self.joinchan(c)
+            for c in self._initial_chans: self.join_channel(c)
             del self._initial_chans
         if self._on_ready:
             self._on_ready()

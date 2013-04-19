@@ -58,7 +58,7 @@ class BotTestCases(AsyncTestCase):
     def test_join(self):
         # testing these together
         chan = '#testchan'
-        self.bot.joinchan(chan)
+        self.bot.join_channel(chan)
         assert self.bot._stream.write.called_with("JOIN :{}".format(chan))
 
     def test_parse_join(self):
