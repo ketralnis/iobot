@@ -227,7 +227,7 @@ class IOBot(object):
 
     def _p_ping(self, irc):
         # One ping only, please
-        log.info('Recieved PING %s' % irc.line[1])
+        logger.info('Recieved PING %s' % irc.line[1])
         self._write("PONG %s\r\n" % irc.line[1])
 
     def _p_privmsg(self, irc):
