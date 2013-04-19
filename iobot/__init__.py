@@ -120,11 +120,13 @@ class IOBot(object):
         # finally, connect.
         self._connect()
 
-    def join_channel(self, chan):
-        self._write("JOIN :%s\r\n" % chan)
+    def join_channel(self, *channels):
+        for c in channels:
+            self._write("JOIN :%s\r\n" % c)
 
-    def part_channel(self, chan):
-        self._write("PART :%s\r\n" % chan)
+    def part_channel(self, *channels):
+        for c in channels:
+            self._write("PART :%s\r\n" % c)
 
     def private_message(self, dest, msg):
         """
