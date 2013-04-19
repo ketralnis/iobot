@@ -97,10 +97,10 @@ class BotTestCases(AsyncTestCase):
         class Echo(TextPlugin):
             def on_text(self, irc):
                 irc.say(irc.text)
-        self.bot.register(Echo())
+        self.bot.register(['echo'])
 
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
-        self.ircin("PRIVMSG #xx", "hi")
+        self.ircin("PRIVMSG #xx", "@echo hi")
 
         self.bot._stream.write.assert_called_with(
                 "PRIVMSG {} :{}\r\n".format("#xx", "hi")
