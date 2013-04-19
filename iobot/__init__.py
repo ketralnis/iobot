@@ -142,7 +142,7 @@ class IOBot(object):
         module = imp.load_module(plugin_name, *module_info)
         return module.Plugin
 
-    def register(self, plugin_names):
+    def register_plugins(self, plugin_names):
         """
         accepts an instance of Plugin to add to the callback chain
         """
@@ -252,7 +252,6 @@ def main():
     ib.register(['echo','stock'])
 
     IOLoop.instance().start()
-
 
 if __name__ == '__main__':
     main()

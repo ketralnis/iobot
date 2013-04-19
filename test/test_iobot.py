@@ -97,7 +97,7 @@ class BotTestCases(AsyncTestCase):
         class Echo(TextPlugin):
             def on_text(self, irc):
                 irc.say(irc.text)
-        self.bot.register(['echo'])
+        self.bot.register_plugins(['echo'])
 
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
         self.ircin("PRIVMSG #xx", "@echo hi")
