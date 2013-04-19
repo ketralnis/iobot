@@ -3,14 +3,17 @@ import re
 import socket
 import imp
 import os
+import logging
 
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
 from iobot.plugins import CommandRegister, TextPlugin
 
-class IrcProtoCmd(object):
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
+class IrcProtoCmd(object):
     def __init__(self, actn):
         self.hooks = set()
         self.actn = actn
@@ -20,9 +23,7 @@ class IrcProtoCmd(object):
         for h in self.hooks:
             h(irc, ln)
 
-
 renick = re.compile("^(\w*?)!")
-
 
 class IrcObj(object):
     """
@@ -76,9 +77,7 @@ class IrcObj(object):
     def error(self, text, dest=None):
         self.say(dest or self.chan, "error: %s" % text)
 
-
 class IOBot(object):
-
     def __init__(
             self,
             host,
@@ -129,13 +128,13 @@ class IOBot(object):
         self._irc_proto[cmd].hooks.add(hook_f)
 
     def joinchan(self, chan):
-        self._stream.write("JOIN :%s\r\n" % chan)
+        self._write("JOIN :%s\r\n" % chan)
 
     def say(self, chan, msg):
         """
         sends a message to a chan or user
         """
-        self._stream.write("PRIVMSG {} :{}\r\n".format(chan, msg))
+        self._write("PRIVMSG {} :{}\r\n".format(chan, msg))
 
     def load_plugin(self, plugin_name):
         plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
@@ -162,13 +161,15 @@ class IOBot(object):
                 self._plugins[cmd] = plugin
 
     def _connect(self):
+        logger.info('Connecting...')
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self._stream = IOStream(_sock)
         self._stream.connect((self.host, self.port), self._after_connect)
 
     def _after_connect(self):
-        self._stream.write("NICK %s\r\n" % self.nick)
-        self._stream.write("USER %s 0 * :%s\r\n" % ("iobot", "iobot"))
+        self._write("NICK %s\r\n" % self.nick)
+        self._write("USER %s 0 * :%s\r\n" % ("iobot", "iobot"))
+        logger.info('Connected!')
 
         if self._initial_chans:
             for c in self._initial_chans: self.joinchan(c)
@@ -184,7 +185,7 @@ class IOBot(object):
         return irc
 
     def _p_ping(self, irc, line):
-        self._stream.write("PONG %s\r\n" % line[1])
+        self._write("PONG %s\r\n" % line[1])
 
     def _p_privmsg(self, irc, line):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
@@ -225,14 +226,18 @@ class IOBot(object):
             doc = "usage: %s %s" % (irc.command, plugin_method.__doc__)
             irc.say(doc)
 
+    def _write(self, line):
+        logger.debug('Writing: %s' % line)
+        self._stream.write(line)
+
     def _next(self):
         # go back on the loop looking for the next line of input
         self._stream.read_until('\r\n', self._incoming)
 
     def _incoming(self, line):
+        logger.debug('Read: %s' % line)
         self._process_plugins(self._parse_line(line))
         self._next()
-
 
 def main():
     ib = IOBot(
