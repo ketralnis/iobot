@@ -129,11 +129,11 @@ class IOBot(object):
     def joinchan(self, chan):
         self._write("JOIN :%s\r\n" % chan)
 
-    def say(self, chan, msg):
+    def say(self, dest, msg):
         """
         sends a message to a chan or user
         """
-        self._write("PRIVMSG {} :{}\r\n".format(chan, msg))
+        self._write("PRIVMSG {} :{}\r\n".format(dest, msg))
 
     def load_plugin(self, plugin_name):
         plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
