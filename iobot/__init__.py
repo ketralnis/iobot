@@ -25,7 +25,7 @@ class IrcProtoCmd(object):
 
 renick = re.compile("^(\w*?)!")
 
-class IrcObj(object):
+class IrcEvent(object):
     """
     tries to guess and populate something from an ircd statement
     """
@@ -42,7 +42,7 @@ class IrcObj(object):
         self._parse_line(line)
 
     def __repr__(self):
-        return ('<IrcObj object with line: \'%s\' and command: \'%s\'>' %
+        return ('<IrcEvent object: \'%s\'>' %
                 (self.line, self.command))
 
     def _parse_line(self, line):
@@ -176,7 +176,7 @@ class IOBot(object):
         self._next()
 
     def _parse_line(self, line):
-        return IrcObj(line, self)
+        return IrcEvent(line, self)
 
     def _p_welcome(self, irc):
         if self._initial_chans:
@@ -212,7 +212,7 @@ class IOBot(object):
         if irc.chan in self.chans: self.chans.remove(irc.chan)
 
     def _process_plugins(self, irc):
-        """ parses a completed ircObj for module hooks """
+        """ parses a completed ircEvent for module hooks """
         try:
             plugin = self._plugins.get(irc.command) if irc.command else None
         except KeyError:
