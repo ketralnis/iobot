@@ -180,8 +180,43 @@ class IOBot(object):
 
         self._next()
 
+    def _write(self, line):
+        logger.debug('Writing: %s' % line)
+        self._stream.write(line)
+
+    def _next(self):
+        # go back on the loop looking for the next line of input
+        self._stream.read_until('\r\n', self._incoming)
+
+    def _incoming(self, line):
+        logger.debug('Read: %s' % line)
+        irc = self._parse_line(line)
+        self._process_hooks(irc)
+        self._process_plugins(irc)
+        self._next()
+
     def _parse_line(self, line):
         return IrcEvent(line, self)
+
+    def _process_hooks(self, irc):
+        if irc.server_cmd in self._irc_proto:
+            self._irc_proto[irc.server_cmd](irc)
+
+    def _process_plugins(self, irc):
+        """ parses a completed ircEvent for module hooks """
+        try:
+            plugin = self._plugins.get(irc.command) if irc.command else None
+        except KeyError:
+            # plugin does not exist
+            pass
+
+        try:
+            if plugin:
+                plugin_method = getattr(plugin, irc.command)
+                plugin_method(irc)
+        except:
+            doc = "usage: %s %s" % (irc.command, plugin_method.__doc__)
+            irc.private_message(doc)
 
     def _p_welcome(self, irc):
         if self._initial_chans:
@@ -191,6 +226,8 @@ class IOBot(object):
             self._on_ready()
 
     def _p_ping(self, irc):
+        # One ping only, please
+        log.info('Recieved PING %s' % irc.line[1])
         self._write("PONG %s\r\n" % irc.line[1])
 
     def _p_privmsg(self, irc):
@@ -215,41 +252,6 @@ class IOBot(object):
         toks = irc.line.strip().split(':')
         irc.chan = toks[1].strip().split()[-1]
         if irc.chan in self.chans: self.chans.remove(irc.chan)
-
-    def _process_plugins(self, irc):
-        """ parses a completed ircEvent for module hooks """
-        try:
-            plugin = self._plugins.get(irc.command) if irc.command else None
-        except KeyError:
-            # plugin does not exist
-            pass
-
-        try:
-            if plugin:
-                plugin_method = getattr(plugin, irc.command)
-                plugin_method(irc)
-        except:
-            doc = "usage: %s %s" % (irc.command, plugin_method.__doc__)
-            irc.private_message(doc)
-
-    def _process_hooks(self, irc):
-        if irc.server_cmd in self._irc_proto:
-            self._irc_proto[irc.server_cmd](irc)
-
-    def _write(self, line):
-        logger.debug('Writing: %s' % line)
-        self._stream.write(line)
-
-    def _next(self):
-        # go back on the loop looking for the next line of input
-        self._stream.read_until('\r\n', self._incoming)
-
-    def _incoming(self, line):
-        logger.debug('Read: %s' % line)
-        irc = self._parse_line(line)
-        self._process_hooks(irc)
-        self._process_plugins(irc)
-        self._next()
 
 def main():
     ib = IOBot(
