@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import re
 import socket
+import imp
+import os
 
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
@@ -34,6 +36,11 @@ class IrcObj(object):
         self.command = None
         self.command_args = None
         self._parse_line(line)
+
+    def __repr__(self):
+        return ('<IrcObj object with line: \'%s\' and command: \'%s\'>' %
+                (self.line, self.command))
+
 
     def _parse_line(self, line):
 
@@ -130,26 +137,29 @@ class IOBot(object):
         """
         self._stream.write("PRIVMSG {} :{}\r\n".format(chan, msg))
 
-    def register(self, plugins):
+    def load_plugin(self, plugin_name):
+        plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
+        module_info = imp.find_module(plugin_name, [plugin_path])
+        module = imp.load_module(plugin_name, *module_info)
+        return module.Plugin
+
+    def register(self, plugin_names):
         """
         accepts an instance of Plugin to add to the callback chain
         """
-        for p in plugins:
+        for plugin_name in plugin_names:
             # update to support custom paths?
-            p_module = __import__(
-                'iobot.plugins.%s.plugin'%p,
-                fromlist=['Plugin']
-                )
-            p_obj = p_module.Plugin()
+            plugin_cls = self.load_plugin(plugin_name)
+            plugin = plugin_cls()
 
             cmds = []
-            for method in dir(p_obj):
-                if callable(getattr(p_obj, method)) \
-                    and hasattr(getattr(p_obj, method), 'cmd'):
+            for method in dir(plugin):
+                if callable(getattr(plugin, method)) \
+                    and hasattr(getattr(plugin, method), 'cmd'):
                     cmds.append(method)
 
             for cmd in cmds:
-                self._plugins[cmd] = p_obj
+                self._plugins[cmd] = plugin
 
     def _connect(self):
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -226,12 +236,12 @@ class IOBot(object):
 
 def main():
     ib = IOBot(
-        host = 'senor.crunchybueno.com',
-        nick = 'iobot',
+        host = 'irc.us.ponychat.net',
+        nick = 'iobot-tron',
         char = '$',
-        owner = 'owner',
+        owner = 'TronPaul',
         port = 6667,
-        initial_chans = ['#33ad'],
+        initial_chans = ['#iobot-test'],
         )
 
     ib.register(['echo','stock'])
