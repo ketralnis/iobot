@@ -29,54 +29,60 @@ class IrcEvent(object):
     """
     tries to guess and populate something from an ircd statement
     """
+    EVENT_PATTERN = re.compile((r'^(:(?P<prefix>((?P<nick>[^!]+)!'
+            r'(?P<user>[^@]+)@(?P<host>[^ ]+)|[^ ]+)) )?'
+            r'((?P<numeric>[0-9]{3})|(?P<command>[^ ]+))'
+            r'( (?P<destination>[^:][^ ]*))?( :(?P<text>.*)|'
+            r' (?P<parameters>.*))?$'))
+    COMMAND_REGEX = (r'^{}(?P<command>[^ ]*)'
+            r'( (?P<params>.*))?$')
 
-    def __init__(self, line, bot):
+    def __init__(self, bot, raw=None):
         self._bot = bot
-        self.line = line
+        self.raw = raw
+        self.type = None
+        self.origin = None
+        self.destination = None
         self.text = None
-        self.server_cmd = None
-        self.chan = None
-        self.nick = None
+        self.parameters = []
+        self.parameters_raw = None
         self.command = None
-        self.command_args = None
-        self._parse_line(line)
+        self.command_params = None
+        if raw:
+            self._parse()
 
     def __repr__(self):
-        return ('<IrcEvent object: \'%s\'>' %
-                (self.line, self.command))
+        return ('<IrcEvent object: %s %s>' % (self.type, self.destination))
 
-    def _parse_line(self, line):
-        if not line.startswith(":"):
-            # PING most likely
-            stoks = line.split()
-            self.server_cmd = stoks[0].upper()
-            return
+    def _parse(self):
+        if self.raw[-2:] == '\r\n':
+            line = self.raw[:-2]
+        else:
+            line = self.raw
+        m = self.EVENT_PATTERN.match(line)
+        self.origin = m.group('prefix')
+        self.type = m.group('command') or m.group('numeric')
+        self.destination = m.group('destination')
+        self.nick = m.group('nick')
+        self.user = m.group('user')
+        self.host = m.group('host')
+        self.text = m.group('text')
+        self.parameters_raw = m.group('parameters')
+        self.parameters = (self.parameters_raw.split() if
+                self.parameters_raw else [])
 
-        # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
-        # :nod!~nod@crunchy.bueno.land PRIVMSG xyz :hi
+        if self.type == 'PRIVMSG':
+            self._parse_command()
 
-        tokens = line[1:].split(":")
-        if not tokens: return
+    def _parse_command(self):
+        regex = self.COMMAND_REGEX.format(self._bot.char)
+        m = re.match(regex, self.text)
+        if m:
+            self.command = m.group('command')
+            self.command_params = m.group('params')
 
-        stoks = tokens[0].split()
-
-        # find originator
-        nick = renick.findall(stoks[0])
-        if len(nick) == 1:
-            self.nick = nick[0]
-        stoks = stoks[1:] # strip off server tok
-
-        self.server_cmd = stoks[0].upper()
-        stoks = stoks[1:]
-
-        # save off remaining tokens
-        self.stoks = stoks
-
-    def private_message(self, text, dest=None):
-        self._bot.private_message(dest or self.chan, text)
-
-    def error(self, text, dest=None):
-        self.private_message(dest or self.chan, "error: %s" % text)
+    def reply(self, text):
+        self._bot.private_message(self.destination, text)
 
 class IOBot(object):
     def __init__(
@@ -101,6 +107,7 @@ class IOBot(object):
         self.port = port
         self.char = char
         self._plugins = dict()
+        self._commands = dict()
         self._connected = False
         # used for parsing out nicks later, just wanted to compile it once
         # server protocol gorp
@@ -110,6 +117,8 @@ class IOBot(object):
             'JOIN'    : IrcProtoCmd(self._p_afterjoin),
             '401'     : IrcProtoCmd(self._p_nochan),
             '001'     : IrcProtoCmd(self._p_welcome),
+            'KICK'    : IrcProtoCmd(self._p_afterkick),
+            'PART'    : IrcProtoCmd(self._p_afterpart)
             }
         # build our user command list
         self.cmds = dict()
@@ -172,7 +181,17 @@ class IOBot(object):
                     cmds.append(method)
 
             for cmd in cmds:
-                self._plugins[cmd] = plugin
+                self._commands[cmd] = plugin
+
+            self._plugins[plugin_name] = plugin_cls
+
+    def unload_plugin(self, plugin_name):
+        plugin_cls = self._plugins[plugin_name]
+        for cmd in self._commands.keys():
+            plugin = self._commands[cmd]
+            if isinstance(plugin, plugin_cls):
+                del self._commands[cmd]
+        del self._plugins[plugin_name]
 
     def load_plugin(self, plugin_name):
         plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
@@ -203,68 +222,67 @@ class IOBot(object):
 
     def _incoming(self, line):
         logger.debug('Read: %s' % line)
-        irc = self._parse_line(line)
-        self._process_hooks(irc)
-        self._process_plugins(irc)
+        event = self._parse_line(line)
+        self._process_hooks(event)
+        self._process_plugins(event)
         self._next()
 
     def _parse_line(self, line):
-        return IrcEvent(line, self)
+        return IrcEvent(self, line)
 
-    def _process_hooks(self, irc):
-        if irc.server_cmd in self._irc_proto:
-            self._irc_proto[irc.server_cmd](irc)
+    def _process_hooks(self, event):
+        print event.type
+        print event.destination
+        print event.text
+        print event.parameters
+        if event.type in self._irc_proto:
+            self._irc_proto[event.type](event)
 
-    def _process_plugins(self, irc):
+    def _process_plugins(self, event):
         """ parses a completed ircEvent for module hooks """
         try:
-            plugin = self._plugins.get(irc.command) if irc.command else None
+            plugin = self._commands.get(event.command) if event.command else None
         except KeyError:
             # plugin does not exist
             pass
 
         try:
             if plugin:
-                plugin_method = getattr(plugin, irc.command)
-                plugin_method(irc)
+                plugin_method = getattr(plugin, event.command)
+                plugin_method(event)
         except:
-            doc = "usage: %s %s" % (irc.command, plugin_method.__doc__)
-            irc.private_message(doc)
+            doc = "usage: %s %s" % (event.command, plugin_method.__doc__)
+            event.reply(doc)
 
-    def _p_welcome(self, irc):
+    def _p_welcome(self, event):
         if self._initial_chans:
             for c in self._initial_chans: self.join_channel(c)
             del self._initial_chans
         if self._on_ready:
             self._on_ready()
 
-    def _p_ping(self, irc):
+    def _p_ping(self, event):
         # One ping only, please
-        logger.info('Recieved PING %s' % irc.line[1])
-        self._write("PONG %s\r\n" % irc.line[1])
+        logger.info('Recieved PING %s' % event.origin)
+        self._write("PONG %s\r\n" % event.text)
 
-    def _p_privmsg(self, irc):
+    def _p_privmsg(self, event):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
-        toks = irc.line[1:].split(':')[0].split()
-        irc.chan = toks[-1] # should be last token after last :
-        irc.text = irc.line[irc.line.find(':',1)+1:].strip()
-        if irc.text and irc.text.startswith(self.char):
-            text_split = irc.text.split()
-            irc.command = text_split[0][1:]
-            irc.command_args = ' '.join(text_split[1:])
+        pass
 
-    def _p_afterjoin(self, irc):
-        toks = irc.line.strip().split(':')
-        if irc.nick != self.nick:
-            return # we don't care right now if others join
-        irc.chan = toks[-1] # should be last token after last :
-        self.chans.add(irc.chan)
+    def _p_afterjoin(self, event):
+        self.chans.add(event.text)
 
-    def _p_nochan(self, irc):
+    def _p_nochan(self, event):
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
-        toks = irc.line.strip().split(':')
-        irc.chan = toks[1].strip().split()[-1]
-        if irc.chan in self.chans: self.chans.remove(irc.chan)
+        if event.parameters[0] in self.chans:
+            self.chans.remove(event.parameters[0])
+
+    def _p_afterpart(self, event):
+        pass
+
+    def _p_afterkick(self, event):
+        self._p_afterpart(self, event)
 
 def main():
     ib = IOBot(
