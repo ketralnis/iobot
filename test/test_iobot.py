@@ -55,6 +55,11 @@ class BotTestCases(AsyncTestCase):
         assert self.wait()
         assert self.bot._stream.write.called
 
+    def test_nick(self):
+        nick = 'testnick'
+        self.bot.set_nick(nick)
+        assert self.bot._stream.write.called_with("NICK {}".format(nick))
+
     def test_join(self):
         # testing these together
         chan = '#testchan'

@@ -120,6 +120,9 @@ class IOBot(object):
         # finally, connect.
         self._connect()
 
+    def set_nick(self, nick):
+        self._write("NICK %s\r\n" % nick)
+
     def join_channel(self, *channels):
         for c in channels:
             self._write("JOIN :%s\r\n" % c)
@@ -175,7 +178,7 @@ class IOBot(object):
 
     def _after_connect(self):
         logger.info('Connected!')
-        self._write("NICK %s\r\n" % self.nick)
+        self.set_nick(self.nick)
         self._write("USER %s 0 * :%s\r\n" % ("iobot", "iobot"))
 
         self._next()
