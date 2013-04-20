@@ -140,6 +140,13 @@ class IOBot(object):
         """
         self._write("PRIVMSG {} :{}\r\n".format(dest, msg))
 
+    def kick(self, channel, user, comment=None):
+        kick_str = "KICK {} {}".format(channel, user)
+        if comment:
+            kick_str += " :{}".format(comment)
+        kick_str += "\r\n"
+        self._write(kick_str)
+
     def hook(self, cmd, hook_f):
         """
         allows easy hooking of any raw irc protocol statement.  These will be

@@ -79,6 +79,12 @@ class BotTestCases(AsyncTestCase):
         self.bot.part_channel(chan)
         assert self.bot._stream.write.called_with("PART :{}".format(chan))
 
+    def test_kick(self):
+        chan = '#testchan'
+        nick = 'nick'
+        self.bot.kick(chan, nick)
+        assert self.bot._stream.write.called_with("KICK {} {}".format(chan,
+            nick))
 
     def test_parse_join(self):
         chan = '#testchan'
