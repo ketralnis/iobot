@@ -96,7 +96,7 @@ class BotTestCases(AsyncTestCase):
                 chan
                 )
             )
-        assert chan in self.bot.chans
+        assert chan in self.bot.channels
 
     def test_msg(self):
         chan, msg = "#hi", "i am the walrus"
@@ -110,13 +110,13 @@ class BotTestCases(AsyncTestCase):
 
     def test_parse_msg_to_unjoined(self):
         chan = "#hi"
-        self.bot.chans.add(chan) # fake join msg
+        self.bot.channels[chan] = [] # fake join msg
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
         self.ircin(
             "401 {} {}".format(self.bot.nick, chan),
             "No such nick/channel"
             )
-        assert chan not in self.bot.chans
+        assert chan not in self.bot.channels
 
     def test_plugin_echo(self):
         class Echo(TextPlugin):

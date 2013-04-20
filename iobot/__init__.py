@@ -9,6 +9,7 @@ from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
 from iobot.event import IrcEvent
+from iobot.user import IrcUser
 from iobot.plugins import CommandRegister, TextPlugin
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class IOBot(object):
         initial_chans: None or list of strings representing channels to join
         """
         self.nick = nick
-        self.chans = set() # chans we're a member of
+        self.channels = dict() # chans we're a member of
         self.owner = owner
         self.host = host
         self.port = port
@@ -58,7 +59,8 @@ class IOBot(object):
             '401'     : IrcProtoCmd(self._p_nochan),
             '001'     : IrcProtoCmd(self._p_welcome),
             'KICK'    : IrcProtoCmd(self._p_afterkick),
-            'PART'    : IrcProtoCmd(self._p_afterpart)
+            'PART'    : IrcProtoCmd(self._p_afterpart),
+            '353'     : IrcProtoCmd(self._p_afternames)
             }
         # build our user command list
         self.cmds = dict()
@@ -207,16 +209,22 @@ class IOBot(object):
         pass
 
     def _p_afterjoin(self, event):
-        self.chans.add(event.text)
+        self.channels[event.text] = []
+
+    def _p_afternames(self, event):
+        nick_chan, nicks_raw = event.parameters_raw.split(':')
+        nicks = nicks_raw.split()
+        channel = nick_chan.split('@')[-1].strip()
+        for nr in nicks:
+            nick = nr if nr[0] != '@' and nr[0] != '+' else nr[1:]
+            self.channels[channel].append(IrcUser(nick))
 
     def _p_nochan(self, event):
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
-        if event.parameters[0] in self.chans:
-            self.chans.remove(event.parameters[0])
+        self._after_part_channel(event.parameters[0])
 
     def _after_part_channel(self, channel):
-        if channel in self.chans:
-            self.chans.remove(channel)
+        del self.channels[channel]
 
     def _p_afterpart(self, event):
         if event.nick == self.nick:
