@@ -231,10 +231,6 @@ class IOBot(object):
         return IrcEvent(self, line)
 
     def _process_hooks(self, event):
-        print event.type
-        print event.destination
-        print event.text
-        print event.parameters
         if event.type in self._irc_proto:
             self._irc_proto[event.type](event)
 
@@ -278,11 +274,19 @@ class IOBot(object):
         if event.parameters[0] in self.chans:
             self.chans.remove(event.parameters[0])
 
+    def _after_part_channel(self, channel):
+        if channel in self.chans:
+            self.chans.remove(channel)
+
     def _p_afterpart(self, event):
-        pass
+        if event.nick == self.nick:
+            logger.info('IOBot parted from %s' % event.destination)
+            self._after_part_channel(event.destination)
 
     def _p_afterkick(self, event):
-        self._p_afterpart(self, event)
+        if event.parameters[0] == self.nick:
+            logger.warn('IOBot was KICKed from %s' % event.destination)
+            self._after_part_channel(event.destination)
 
 def main():
     ib = IOBot(
