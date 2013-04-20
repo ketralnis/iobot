@@ -43,6 +43,7 @@ class IOBot(object):
         """
         self.nick = nick
         self.channels = dict() # chans we're a member of
+        self.users = dict()
         self.owner = owner
         self.host = host
         self.port = port
@@ -60,7 +61,8 @@ class IOBot(object):
             '001'     : IrcProtoCmd(self._p_welcome),
             'KICK'    : IrcProtoCmd(self._p_afterkick),
             'PART'    : IrcProtoCmd(self._p_afterpart),
-            '353'     : IrcProtoCmd(self._p_afternames)
+            '353'     : IrcProtoCmd(self._p_afternames),
+            'NICK'    : IrcProtoCmd(self._p_afternick)
             }
         # build our user command list
         self.cmds = dict()
@@ -208,16 +210,32 @@ class IOBot(object):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
         pass
 
+    def _p_afternick(self, event):
+        new_nick = event.text
+        if event.nick == self.nick:
+            self.nick = new_nick
+        else:
+            user = self.users.pop(event.nick)
+            user.nick = new_nick
+            self.users[new_nick] = user
+
     def _p_afterjoin(self, event):
         self.channels[event.text] = []
 
     def _p_afternames(self, event):
         nick_chan, nicks_raw = event.parameters_raw.split(':')
         nicks = nicks_raw.split()
-        channel = nick_chan.split('@')[-1].strip()
+        if '@' in nick_chan:
+            channel = nick_chan.split('@')[-1].strip()
+        elif '=' in nick_chan:
+            channel = nick_chan.split('=')[-1].strip()
+        else:
+            raise Exception
         for nr in nicks:
             nick = nr if nr[0] != '@' and nr[0] != '+' else nr[1:]
-            self.channels[channel].append(IrcUser(nick))
+            user = IrcUser(nick)
+            self.channels[channel].append(user)
+            self.users[nick] = user
 
     def _p_nochan(self, event):
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
@@ -238,7 +256,7 @@ class IOBot(object):
 
 def main():
     ib = IOBot(
-        host = 'irc.us.ponychat.net',
+        host = 'irc.ponychat.net',
         nick = 'iobot-tron',
         char = '$',
         owner = 'TronPaul',
