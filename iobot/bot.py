@@ -8,8 +8,6 @@ from tornado.iostream import IOStream
 from iobot.event import IrcEvent
 from iobot.user import IrcUser
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class IrcProtoCmd(object):
     def __init__(self, actn):
@@ -31,12 +29,15 @@ class IOBot(object):
             owner = 'owner',
             initial_chans = None,
             on_ready = None,
+            loglevel = logging.INFO
             ):
         """
         create an irc bot instance.
         @params
         initial_chans: None or list of strings representing channels to join
         """
+        self.logger = logging.getLogger('iobot.bot.IOBot')
+        self.logger.setLevel(loglevel)
         self.nick = nick
         self.channels = dict() # chans we're a member of
         self.users = dict()
@@ -140,20 +141,20 @@ class IOBot(object):
         return module.Plugin
 
     def _connect(self):
-        logger.info('Connecting...')
+        self.logger.info('Connecting...')
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self._stream = IOStream(_sock)
         self._stream.connect((self.host, self.port), self._after_connect)
 
     def _after_connect(self):
-        logger.info('Connected!')
+        self.logger.info('Connected!')
         self.set_nick(self.nick)
         self.set_user('iobot', 'iobot')
 
         self._next()
 
     def _write(self, line):
-        logger.debug('Writing: %s' % line)
+        self.logger.debug('Writing: %s' % line)
         self._stream.write(line)
 
     def _next(self):
@@ -161,7 +162,7 @@ class IOBot(object):
         self._stream.read_until('\r\n', self._incoming)
 
     def _incoming(self, line):
-        logger.debug('Read: %s' % line)
+        self.logger.debug('Read: %s' % line.encode('string_escape'))
         event = self._parse_line(line)
         self._process_hooks(event)
         self._process_plugins(event)
@@ -199,7 +200,7 @@ class IOBot(object):
 
     def _p_ping(self, event):
         # One ping only, please
-        logger.info('Recieved PING %s' % event.origin)
+        self.logger.info('Recieved PING %s' % event.origin)
         self._write("PONG %s\r\n" % event.text)
 
     def _p_privmsg(self, event):
@@ -242,10 +243,10 @@ class IOBot(object):
 
     def _p_afterpart(self, event):
         if event.nick == self.nick:
-            logger.info('IOBot parted from %s' % event.destination)
+            self.logger.info('IOBot parted from %s' % event.destination)
             self._after_part_channel(event.destination)
 
     def _p_afterkick(self, event):
         if event.parameters[0] == self.nick:
-            logger.warn('IOBot was KICKed from %s' % event.destination)
+            self.logger.warn('IOBot was KICKed from %s' % event.destination)
             self._after_part_channel(event.destination)
