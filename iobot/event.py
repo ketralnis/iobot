@@ -1,9 +1,6 @@
 import re
 
 class IrcEvent(object):
-    """
-    tries to guess and populate something from an ircd statement
-    """
     EVENT_PATTERN = re.compile((r'^(:(?P<prefix>((?P<nick>[^!]+)!'
             r'(?P<user>[^@]+)@(?P<host>[^ ]+)|[^ ]+)) )?'
             r'((?P<numeric>[0-9]{3})|(?P<command>[^ ]+))'
@@ -12,9 +9,10 @@ class IrcEvent(object):
     COMMAND_REGEX = (r'^{}(?P<command>[^ ]*)'
             r'( (?P<params>.*))?$')
 
-    def __init__(self, bot, raw=None):
-        self._bot = bot
+    def __init__(self, cmd_char, raw):
+        self.cmd_char = cmd_char
         self.raw = raw
+
         self.type = None
         self.origin = None
         self.destination = None
@@ -50,11 +48,8 @@ class IrcEvent(object):
             self._parse_command()
 
     def _parse_command(self):
-        regex = self.COMMAND_REGEX.format(self._bot.char)
+        regex = self.COMMAND_REGEX.format(re.escape(self.cmd_char))
         m = re.match(regex, self.text)
         if m:
             self.command = m.group('command')
             self.command_params = m.group('params')
-
-    def reply(self, text):
-        self._bot.private_message(self.destination, text)
