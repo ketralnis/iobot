@@ -1,4 +1,4 @@
-
+import logging
 import sys, os.path
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 
@@ -29,6 +29,7 @@ class TestIrcConnection(AsyncTestCase):
         from iobot.irc import IrcConnection
         super(TestIrcConnection, self).setUp()
         bot = mock.Mock()
+        bot.loglevel = logging.DEBUG
         self.irc = IrcConnection(bot, 'test', 'localhost', 6667,
                 'testie', 'iobot', 'iobot')
         self.irc.connect()
@@ -119,7 +120,8 @@ class BotTestCases(AsyncTestCase):
             '@',
             'testie',
             'iobot',
-            'iobot'
+            'iobot',
+            0
         )
 
     def test_process_plugins(self):
