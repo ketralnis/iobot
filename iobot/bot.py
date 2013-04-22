@@ -5,7 +5,7 @@ from logging import DEBUG
 from iobot.irc import IrcConnection
 
 class IOBot(object):
-    def __init__(self, servers, cmd_char, nick, user, realname):
+    def __init__(self, servers, cmd_char, nick, user, realname, loglevel):
         """
         create an irc bot instance.
         @params
@@ -19,7 +19,7 @@ class IOBot(object):
         self._commands = dict()
         # build our user command list
         self.cmds = dict()
-        self.log_level = DEBUG
+        self.loglevel = loglevel
 
         for server_name, config in servers.items():
             conn = self.create_connection(server_name, config)

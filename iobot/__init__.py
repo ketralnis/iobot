@@ -16,7 +16,8 @@ def run_bot(config_path, loglevel):
         prefix,
         nick,
         user,
-        realname
+        realname,
+        loglevel
         )
 
     IOLoop.instance().start()
