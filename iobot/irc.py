@@ -74,24 +74,24 @@ class IrcConnection(object):
         self.users[new_nick] = user
 
     def set_nick(self, nick):
-        self.logger.info('SETTING NICK: %s' % nick)
+        self.logger.info('SETTING NICK {nick: %s}' % nick)
         self.write_raw('NICK %s' % nick)
 
     def join_channel(self, *channels):
-        self.logger.info('JOINING CHANNEL(S): %s' % channels)
+        self.logger.info('JOINING CHANNEL(S): {channels: %s}' % channels)
         chan_def = ','.join(channels)
         self.write_raw('JOIN %s' % chan_def)
 
     def part_channel(self, channel):
-        self.logger.info('PARTING CHANNEL: %s' % channel)
+        self.logger.info('PARTING CHANNEL: {channels: %s}' % channel)
         self.write_raw('PART :%s' % channel)
 
     def private_message(self, destination, message):
-        self.logger.info('SENDING PRIVMSG<%s>: %s' % (destination, message))
+        self.logger.info('SENDING PRIVMSG: {destination: %s, message: %s}' % (destination, message))
         self.write_raw('PRIVMSG %s :%s' % (destination, message))
 
     def kick(self, channel, user, comment=None):
-        self.logger.info('KICKING<%s> %s' % (channel, user))
+        self.logger.info('KICKING {channel: %s, user: %s}' % (channel, user))
         kick_str = 'KICK %s %s' % (channel, user)
         if comment:
             kick_str += ' :%s' % comment
@@ -99,11 +99,11 @@ class IrcConnection(object):
 
     def write_raw(self, line):
         line.replace(EOL, '')
-        self.logger.debug('WRITE RAW:\n%s' % line)
+        self.logger.debug('WRITE RAW: {line: %s}' % line)
         self._stream.write(line + EOL)
 
     def read_raw(self, line):
-        self.logger.debug('READ RAW:\n%s' % line.replace(EOL, ''))
+        self.logger.debug('READ RAW: {line: %s}' % line.replace(EOL, ''))
         cmd_char = self.bot.cmd_char
         event = IrcEvent(cmd_char, line)
         self.handle(event)
@@ -129,7 +129,8 @@ class IrcConnection(object):
 
     def on_privmsg(self, event):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
-        self.logger.info('RECIEVED PRIVMSG')
+        self.logger.info('RECIEVED PRIVMSG {destination: %s,'
+                ' message: %s}' % (event.destination, event.text))
         pass
 
     def on_nick(self, event):
@@ -148,7 +149,6 @@ class IrcConnection(object):
         self.add_channel(channel)
 
     def on_names(self, event):
-        self.logger.info('RECIEVED NAMES')
         nick_chan, nicks_raw = event.parameters_raw.split(':')
         nicks = nicks_raw.split()
         if '@' in nick_chan:
@@ -157,24 +157,33 @@ class IrcConnection(object):
             channel = nick_chan.split('=')[-1].strip()
         else:
             raise Exception
+        self.logger.info('RECIEVED NAMES {channel: %s, nick_count: %d}' % (
+            channel, len(nicks)))
         for nr in nicks:
             nick = nr if nr[0] != '@' and nr[0] != '+' else nr[1:]
             user = IrcUser(nick)
             self.add_user(channel, user)
 
     def on_nochan(self, event):
-        self.logger.info('RECIEVED ERR_NOSUCHCHANNEL')
+        channel = event.parameters[0]
+        self.logger.info('RECIEVED ERR_NOSUCHCHANNEL {channel: %s}' % channel)
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
-        self.remove_channel(event.parameters[0])
+        self.remove_channel(channel)
 
     def on_part(self, event):
-        self.logger.info('RECIEVED PART')
+        nick = event.nick
+        channel = event.destination
+        self.logger.info('RECIEVED PART {channel: %s, nick: %s}' % (channel,
+            nick))
         if event.nick == self.nick:
-            self.logger.info('IOBot parted from %s' % event.destination)
-            self.remove_channel(event.destination)
+            self.logger.info('IOBot parted from %s' % channel)
+            self.remove_channel(channel)
 
     def on_kick(self, event):
-        self.logger.info('RECIEVED KICK')
+        nick = event.parameters[0]
+        channel = event.destination
+        self.logger.info('RECIEVED KICK {channel: %s, nick: %s}' % (channel,
+            nick))
         if event.parameters[0] == self.nick:
-            self.logger.warn('IOBot was KICKed from %s' % event.destination)
-            self.remove_channel(event.destination)
+            self.logger.warn('IOBot was KICKed from %s' % channel)
+            self.remove_channel(channel)
