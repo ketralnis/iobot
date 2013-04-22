@@ -9,11 +9,11 @@ from iobot.logging import create_logger
 EOL = '\r\n'
 
 class IrcConnection(object):
-    def __init__(self, bot, server_name, host, port, nick, user,
+    def __init__(self, bot, server_name, address, port, nick, user,
             realname, channels=None):
         self.bot = bot
         self.server_name = server_name
-        self.host = host
+        self.address = address
         self.port = port
         self.nick = nick
         self.user = user

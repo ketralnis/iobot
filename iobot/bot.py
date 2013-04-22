@@ -26,11 +26,11 @@ class IOBot(object):
             conn.connect()
 
     def create_connection(self, server_name, config):
-        host = config['host']
+        address = config['address']
         port = config['port']
         channels = config.get('channels', [])
-        return IrcConnection(self, server_name, host, port, nick, user,
-                realname, channels)
+        return IrcConnection(self, server_name, address, port,
+                self.nick, self.user, self.realname, channels)
 
     def register_plugins(self, plugin_names):
         """

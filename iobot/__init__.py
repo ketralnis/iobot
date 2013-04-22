@@ -1,27 +1,22 @@
 from tornado.ioloop import IOLoop
 
 from iobot.bot import IOBot
+from iobot.config import read_config
 from iobot.plugins import CommandRegister, TextPlugin
 
 def run_bot(config_path, loglevel):
-    servers = {'ponychat': {
-        'host': 'irc.ponychat.net',
-        'port': 6667,
-        'channels': ['#iobot-test']
-        }
-    }
-    cmd_char = '$'
-    nick = 'iobot-tron'
-    user = 'iobot'
-    realname = 'iobot'
+    config = read_config(config_path)
+    servers = config['servers']
+    prefix = config['core']['prefix']
+    nick = config['core']['nick']
+    user = config['core']['user']
+    realname = config['core']['realname']
     ib = IOBot(
         servers,
-        cmd_char,
+        prefix,
         nick,
         user,
         realname
         )
-
-    ib.register_plugins(['echo'])
 
     IOLoop.instance().start()
