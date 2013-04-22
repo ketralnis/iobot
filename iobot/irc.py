@@ -4,7 +4,7 @@ from tornado.iostream import IOStream
 
 from iobot.event import IrcEvent
 from iobot.user import IrcUser
-from iobot.logging import create_logger
+from iobot.log import create_logger
 
 EOL = '\r\n'
 
@@ -19,11 +19,14 @@ class IrcConnection(object):
         self.user = user
         self.realname = realname
         self.initial_channels = set(channels) if channels else set()
+        self.log_format = ('%(asctime)s - %(levelname)s in %(module)s '
+                '[%(pathname)s:%(lineno)d]:\n%(message)s'.format(
+                self.server_name))
+        self.logger = create_logger(self)
 
         self._protocol_events = dict()
         self.channels = dict()
         self.users = dict()
-        self.logger = create_logger(__name__)
         self.init_protocol_events()
 
     def init_protocol_events(self):
@@ -43,7 +46,7 @@ class IrcConnection(object):
         self.logger.info('CONNECTING...')
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self._stream = IOStream(_sock)
-        self._stream.connect((self.host, self.port), self._register)
+        self._stream.connect((self.address, self.port), self._register)
 
     def _register(self):
         self.set_nick(self.nick)
@@ -96,11 +99,11 @@ class IrcConnection(object):
 
     def write_raw(self, line):
         line.replace(EOL, '')
-        self.logger.debug('WRITE RAW: %s' % line)
+        self.logger.debug('WRITE RAW:\n%s' % line)
         self._stream.write(line + EOL)
 
     def read_raw(self, line):
-        self.logger.debug('READ RAW: %s' % line)
+        self.logger.debug('READ RAW:\n%s' % line.replace(EOL, ''))
         cmd_char = self.bot.cmd_char
         event = IrcEvent(cmd_char, line)
         self.handle(event)
@@ -115,22 +118,22 @@ class IrcConnection(object):
         self._stream.read_until(EOL, self.read_raw)
 
     def on_welcome(self, event):
-        self.logger.info('[%s] RECIEVED RPL_WELCOME' % self.server_name)
+        self.logger.info('RECIEVED RPL_WELCOME')
         if self.initial_channels:
             self.join_channel(*self.initial_channels)
 
     def on_ping(self, event):
         # One ping only, please
-        self.logger.info('[%s] RECIEVED PING' % self.server_name)
+        self.logger.info('RECIEVED PING')
         self.write_raw("PONG %s\r\n" % event.text)
 
     def on_privmsg(self, event):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
-        self.logger.info('[%s] RECIEVED PRIVMSG' % self.server_name)
+        self.logger.info('RECIEVED PRIVMSG')
         pass
 
     def on_afternick(self, event):
-        self.logger.info('[%s] RECIEVED NICK' % self.server_name)
+        self.logger.info('RECIEVED NICK')
         new_nick = event.text
         if event.nick == self.nick:
             self.nick = new_nick
@@ -139,11 +142,11 @@ class IrcConnection(object):
             self.user_change_nick(old_nick, new_nick)
 
     def on_afterjoin(self, event):
-        self.logger.info('[%s] RECIEVED JOIN' % self.server_name)
+        self.logger.info('RECIEVED JOIN')
         self.add_channel(event.text)
 
     def on_afternames(self, event):
-        self.logger.info('[%s] RECIEVED NAMES' % self.server_name)
+        self.logger.info('RECIEVED NAMES')
         nick_chan, nicks_raw = event.parameters_raw.split(':')
         nicks = nicks_raw.split()
         if '@' in nick_chan:
@@ -158,19 +161,18 @@ class IrcConnection(object):
             self.add_user(channel, user)
 
     def on_nochan(self, event):
-        self.logger.info('[%s] RECIEVED ERR_NOSUCHCHANNEL' %
-                self.server_name)
+        self.logger.info('RECIEVED ERR_NOSUCHCHANNEL')
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
         self.remove_channel(event.parameters[0])
 
     def on_afterpart(self, event):
-        self.logger.info('[%s] RECIEVED PART' % self.server_name)
+        self.logger.info('RECIEVED PART')
         if event.nick == self.nick:
             self.logger.info('IOBot parted from %s' % event.destination)
             self.remove_channel(event.destination)
 
     def on_afterkick(self, event):
-        self.logger.info('[%s] RECIEVED KICK' % self.server_name)
+        self.logger.info('RECIEVED KICK')
         if event.parameters[0] == self.nick:
             self.logger.warn('IOBot was KICKed from %s' % event.destination)
             self.remove_channel(event.destination)
