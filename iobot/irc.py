@@ -33,13 +33,13 @@ class IrcConnection(object):
         self._protocol_events = {
             'PRIVMSG' : self.on_privmsg,
             'PING'    : self.on_ping,
-            'JOIN'    : self.on_afterjoin,
+            'JOIN'    : self.on_join,
             '401'     : self.on_nochan,
             '001'     : self.on_welcome,
-            'KICK'    : self.on_afterkick,
-            'PART'    : self.on_afterpart,
-            '353'     : self.on_afternames,
-            'NICK'    : self.on_afternick
+            'KICK'    : self.on_kick,
+            'PART'    : self.on_part,
+            '353'     : self.on_names,
+            'NICK'    : self.on_nick
         }
 
     def connect(self, reconnecting=False):
@@ -132,20 +132,22 @@ class IrcConnection(object):
         self.logger.info('RECIEVED PRIVMSG')
         pass
 
-    def on_afternick(self, event):
-        self.logger.info('RECIEVED NICK')
+    def on_nick(self, event):
+        old_nick = event.nick
         new_nick = event.text
+        self.logger.info('RECIEVED NICK {old_nick: %s, new_nick: %s}' %
+                (old_nick, new_nick))
         if event.nick == self.nick:
             self.nick = new_nick
         else:
-            old_nick = event.nick
             self.user_change_nick(old_nick, new_nick)
 
-    def on_afterjoin(self, event):
-        self.logger.info('RECIEVED JOIN')
-        self.add_channel(event.text)
+    def on_join(self, event):
+        channel = event.text or event.destination
+        self.logger.info('RECIEVED JOIN {channel: %s}' % (channel))
+        self.add_channel(channel)
 
-    def on_afternames(self, event):
+    def on_names(self, event):
         self.logger.info('RECIEVED NAMES')
         nick_chan, nicks_raw = event.parameters_raw.split(':')
         nicks = nicks_raw.split()
@@ -165,13 +167,13 @@ class IrcConnection(object):
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
         self.remove_channel(event.parameters[0])
 
-    def on_afterpart(self, event):
+    def on_part(self, event):
         self.logger.info('RECIEVED PART')
         if event.nick == self.nick:
             self.logger.info('IOBot parted from %s' % event.destination)
             self.remove_channel(event.destination)
 
-    def on_afterkick(self, event):
+    def on_kick(self, event):
         self.logger.info('RECIEVED KICK')
         if event.parameters[0] == self.nick:
             self.logger.warn('IOBot was KICKed from %s' % event.destination)
