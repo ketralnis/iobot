@@ -7,7 +7,7 @@ from iobot.irc import IrcConnection
 class DuplicatePluginHookWarning(Warning):
     pass
 
-class CommandOverwrttenWarning(Warning):
+class CommandOverwirttenWarning(Warning):
     pass
 
 class IOBot(object):
@@ -70,6 +70,7 @@ class IOBot(object):
     def reload_plugin(self, plugin_name):
         if plugin_name not in self._plugins:
             raise KeyError
+        self.unload_plugin(plugin_name)
         self.load_plugin(plugin_name)
 
     def load_plugin(self, plugin_name):
@@ -99,11 +100,11 @@ class IOBot(object):
             if callable(attr):
                 if hasattr(attr, 'cmd') and getattr(attr, 'cmd'):
                     if attr_name in self._commands:
-                        raise CommandOverwrttenWarning
+                        raise CommandOverwrittenWarning
                     self._commands[attr_name] = plugin
                 elif hasattr(attr, 'hook') and getattr(attr, 'hook'):
                     hook_name = attr_name[3:]
-                    self.add_hook(hook_name, plugin)
+                    self.add_hook(hook_name, plugin, plugin_cls)
 
     def load_module(self, plugin_name):
         # this will also reload a loaded module

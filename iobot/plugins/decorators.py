@@ -10,7 +10,7 @@ class HookNameError(Exception):
 
 def plugin_hook(f):
     f.hook = True
-    if not f.func_name.startswith('do_'):
+    if not f.func_name.startswith('on_'):
         raise HookNameError
     return f
 

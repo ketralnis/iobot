@@ -1,3 +1,4 @@
+import traceback
 from iobot.plugins.decorators import plugin_command
 
 class AdminPlugin(object):
@@ -6,9 +7,10 @@ class AdminPlugin(object):
         plugin_name = event.command_params[0]
         try:
             conn.bot.load_plugin(plugin_name)
-        except Exception as e:
+        except Exception:
             conn.reply_with_nick(event, 'Error loading %s' % plugin_name)
-            conn.logger.error('Error loading %s: %s' % (plugin_name, e))
+            tb = traceback.format_exc()
+            conn.logger.error('Error loading %s: %s' % (plugin_name, tb))
         else:
             conn.reply(event, 'Loaded %s' % plugin_name)
             conn.logger.info('%s loaded %s' % (event.nick, plugin_name))
@@ -32,9 +34,10 @@ class AdminPlugin(object):
             conn.bot.reload_plugin(plugin_name)
         except KeyError:
             conn.reply_with_nick(event, '%s is not loaded' % plugin_name)
-        except Exception as e:
+        except Exception:
             conn.reply_with_nick(event, 'Error reloading %s' % plugin_name)
-            conn.logger.error('Error reloading %s: %s' % (plugin_name, e))
+            tb = traceback.format_exc()
+            conn.logger.error('Error reloading %s: %s' % (plugin_name, tb))
         else:
             conn.reply(event, 'Reloaded %s' % plugin_name)
             conn.logger.info('%s reloaded %s' % (event.nick, plugin_name))
