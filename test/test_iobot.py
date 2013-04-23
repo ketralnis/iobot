@@ -7,7 +7,7 @@ from unittest import TestCase
 import mock
 from tornado.testing import AsyncTestCase
 
-from iobot import IOBot, CommandRegister, TextPlugin
+from iobot import IOBot
 
 def _patched_connect(self):
     """
@@ -134,25 +134,3 @@ class BotTestCases(AsyncTestCase):
         self.bot._commands['test'] = mock_command
         self.bot.process_plugins(mock_connection, mock_event)
         mock_command.test.assert_called_with(mock_connection, mock_event)
-
-class CommandRegisterTests(TestCase):
-    def test_instance(self):
-        c = CommandRegister()
-        assert c is CommandRegister() is not CommandRegister
-
-    def test_register_and_exec(self):
-
-        class Tester(TextPlugin):
-            def __init__(self):
-                self.register('go', self.go)
-            def go(self, irc):
-                return 23
-
-        Tester()
-
-        # confirms command registration
-        assert 'go' in CommandRegister()
-        assert 'went' not in CommandRegister()
-
-        # now text execution
-        assert 23 == CommandRegister().cmdexec('go', None)

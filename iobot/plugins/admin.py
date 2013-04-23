@@ -1,7 +1,6 @@
-from iobot.plugins import TextPlugin
 from iobot.plugins.decorators import plugin_command
 
-class AdminPlugin(TextPlugin):
+class AdminPlugin(object):
     @plugin_command
     def load(self, conn, event):
         plugin_name = event.command_params[0]
