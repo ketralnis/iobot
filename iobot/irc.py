@@ -170,8 +170,12 @@ class IrcConnection(object):
 
     def on_join(self, event):
         channel = event.text or event.destination
-        self.logger.info('RECIEVED JOIN {channel: %s}' % (channel))
-        self.add_channel(channel)
+        nick = event.nick
+        self.logger.info('RECIEVED JOIN {channel: %s, nick: %s}' % (channel, nick))
+        if self.nick == nick:
+            self.add_channel(channel)
+        else:
+            self.add_user(channel, IrcUser(nick))
 
     def on_names(self, event):
         nick_chan, nicks_raw = event.parameters_raw.split(':')
