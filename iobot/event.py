@@ -34,7 +34,8 @@ class IrcEvent(object):
             line = self.raw
         m = self.EVENT_PATTERN.match(line)
         self.origin = m.group('prefix')
-        self.type = m.group('command') or m.group('numeric')
+        command = m.group('command')
+        self.type = command.upper() if command else m.group('numeric')
         self.destination = m.group('destination')
         self.nick = m.group('nick')
         self.user = m.group('user')

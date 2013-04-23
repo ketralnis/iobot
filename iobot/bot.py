@@ -82,6 +82,7 @@ class IOBot(object):
         self._plugins[plugin_name] = plugin_cls
 
     def add_hook(self, hook_name, plugin, plugin_cls):
+        hook_name = hook_name.upper()
         if hook_name in self._hooks:
             plugins = self._hooks[hook_name]
         else:

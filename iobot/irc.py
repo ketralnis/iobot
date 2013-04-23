@@ -18,6 +18,9 @@ def wrap_logger(connection):
     logger = LoggerAdapter(logger, {'server_name': connection.server_name})
     return logger
 
+class IrcError(Exception):
+    pass
+
 EOL = '\r\n'
 
 class IrcConnection(object):
@@ -87,6 +90,8 @@ class IrcConnection(object):
         self.users[new_nick] = user
 
     def set_nick(self, nick):
+        if not nick:
+            raise IrcError('Cannot set empty nick')
         self.logger.info('SETTING NICK {nick: %s}' % nick)
         self.write_raw('NICK %s' % nick)
 
@@ -95,11 +100,14 @@ class IrcConnection(object):
         chan_def = ','.join(channels)
         self.write_raw('JOIN %s' % chan_def)
 
-    def part_channel(self, channel):
-        self.logger.info('PARTING CHANNEL: {channels: %s}' % repr(channel))
-        self.write_raw('PART :%s' % channel)
+    def part_channel(self, *channels):
+        self.logger.info('PARTING CHANNEL: {channels: %s}' % repr(channels))
+        chan_def = ','.join(channels)
+        self.write_raw('PART :%s' % chan_def)
 
     def private_message(self, destination, message):
+        if not message:
+            raise IrcError('Cannot send empty message')
         self.logger.info('SENDING PRIVMSG: {destination: %s, message: %s}' % (destination, message))
         self.write_raw('PRIVMSG %s :%s' % (destination, message))
 
@@ -116,6 +124,10 @@ class IrcConnection(object):
         self.reply(event, message)
 
     def kick(self, channel, user, comment=None):
+        if not channel:
+            raise IrcError('Cannot kick from empty channel')
+        if not user:
+            raise IrcError('Cannot kick empty player')
         self.logger.info('KICKING {channel: %s, user: %s}' % (channel, user))
         kick_str = 'KICK %s %s' % (channel, user)
         if comment:
