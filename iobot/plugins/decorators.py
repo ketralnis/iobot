@@ -5,6 +5,15 @@ def plugin_command(f):
     f.cmd = True
     return f
 
+class HookNameError(Exception):
+    pass
+
+def plugin_hook(f):
+    f.hook = True
+    if not f.func_name.startswith('do_'):
+        raise HookNameError
+    return f
+
 def admin_command(f):
     def wrapper_func(self, conn, event):
         if event.nick != conn.owner:

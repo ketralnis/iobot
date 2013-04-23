@@ -4,6 +4,12 @@ from logging import DEBUG
 
 from iobot.irc import IrcConnection
 
+class DuplicatePluginHookWarning(Warning):
+    pass
+
+class CommandOverwrttenWarning(Warning):
+    pass
+
 class IOBot(object):
     def __init__(self, servers, cmd_char, nick, user, realname, loglevel):
         """
@@ -17,6 +23,7 @@ class IOBot(object):
         self.cmd_char = cmd_char
         self._plugins = dict()
         self._commands = dict()
+        self._hooks = dict()
         # build our user command list
         self.cmds = dict()
         self.loglevel = loglevel
@@ -43,11 +50,22 @@ class IOBot(object):
 
     def unload_plugin(self, plugin_name):
         plugin_cls = self._plugins[plugin_name]
+        self.unload_commands(plugin_cls)
+        self.unload_hooks(plugin_cls)
+        del self._plugins[plugin_name]
+
+    def unload_commands(self, plugin_cls):
         for cmd in self._commands.keys():
             plugin = self._commands[cmd]
             if isinstance(plugin, plugin_cls):
                 del self._commands[cmd]
-        del self._plugins[plugin_name]
+
+    def unload_hooks(self, plugin_cls):
+        for hook in self._hooks.keys():
+            plugins = self._hooks[hook]
+            for plugin in plugins:
+                if isinstance(plugin, plugin_cls):
+                    self._hooks[hook].remove(plugin)
 
     def reload_plugin(self, plugin_name):
         if plugin_name not in self._plugins:
@@ -58,18 +76,33 @@ class IOBot(object):
         # update to support custom paths?
         plugin_module = self.load_module(plugin_name)
         plugin_cls = plugin_module.Plugin
-        plugin = plugin_cls()
 
-        cmds = []
-        for method in dir(plugin):
-            if callable(getattr(plugin, method)) \
-                and hasattr(getattr(plugin, method), 'cmd'):
-                cmds.append(method)
-
-        for cmd in cmds:
-            self._commands[cmd] = plugin
+        self.load_plugin_methods(plugin_cls)
 
         self._plugins[plugin_name] = plugin_cls
+
+    def add_hook(self, hook_name, plugin, plugin_cls):
+        if hook_name in self._hooks:
+            plugins = self._hooks[hook_name]
+        else:
+            plugins = []
+            self._hooks[hook_name] = plugins
+        if any(isinstance(p, plugin_cls) for p in plugins):
+            raise DuplicatePluginHookWarning
+        plugins.append(plugin)
+
+    def load_plugin_methods(self, plugin_cls):
+        plugin = plugin_cls()
+        for attr_name in dir(plugin):
+            attr = getattr(plugin, attr_name)
+            if callable(attr):
+                if hasattr(attr, 'cmd') and getattr(attr, 'cmd'):
+                    if attr_name in self._commands:
+                        raise CommandOverwrttenWarning
+                    self._commands[attr_name] = plugin
+                elif hasattr(attr, 'hook') and getattr(attr, 'hook'):
+                    hook_name = attr_name[3:]
+                    self.add_hook(hook_name, plugin)
 
     def load_module(self, plugin_name):
         # this will also reload a loaded module
