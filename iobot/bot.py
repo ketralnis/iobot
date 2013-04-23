@@ -29,28 +29,17 @@ class IOBot(object):
         address = config['address']
         port = config['port']
         channels = config.get('channels', [])
+        owner = config['owner']
         return IrcConnection(self, server_name, address, port,
-                self.nick, self.user, self.realname, channels)
+                self.nick, self.user, self.realname, owner,
+                channels)
 
     def register_plugins(self, plugin_names):
         """
         accepts an instance of Plugin to add to the callback chain
         """
         for plugin_name in plugin_names:
-            # update to support custom paths?
-            plugin_cls = self.load_plugin(plugin_name)
-            plugin = plugin_cls()
-
-            cmds = []
-            for method in dir(plugin):
-                if callable(getattr(plugin, method)) \
-                    and hasattr(getattr(plugin, method), 'cmd'):
-                    cmds.append(method)
-
-            for cmd in cmds:
-                self._commands[cmd] = plugin
-
-            self._plugins[plugin_name] = plugin_cls
+            self.load_plugin(plugin_name)
 
     def unload_plugin(self, plugin_name):
         plugin_cls = self._plugins[plugin_name]
@@ -60,11 +49,34 @@ class IOBot(object):
                 del self._commands[cmd]
         del self._plugins[plugin_name]
 
+    def reload_plugin(self, plugin_name):
+        if plugin_name not in self._plugins:
+            raise KeyError
+        self.load_plugin(plugin_name)
+
     def load_plugin(self, plugin_name):
+        # update to support custom paths?
+        plugin_module = self.load_module(plugin_name)
+        plugin_cls = plugin_module.Plugin
+        plugin = plugin_cls()
+
+        cmds = []
+        for method in dir(plugin):
+            if callable(getattr(plugin, method)) \
+                and hasattr(getattr(plugin, method), 'cmd'):
+                cmds.append(method)
+
+        for cmd in cmds:
+            self._commands[cmd] = plugin
+
+        self._plugins[plugin_name] = plugin_cls
+
+    def load_module(self, plugin_name):
+        # this will also reload a loaded module
         plugin_path = os.path.join(os.path.split(__file__)[0], 'plugins/')
         module_info = imp.find_module(plugin_name, [plugin_path])
         module = imp.load_module(plugin_name, *module_info)
-        return module.Plugin
+        return module
 
     def process_plugins(self, connection, event):
         """ parses a completed ircEvent for module hooks """
@@ -74,6 +86,9 @@ class IOBot(object):
             # plugin does not exist
             pass
 
-        if plugin:
+        if plugin and hasattr(plugin, event.command):
             plugin_method = getattr(plugin, event.command)
-            plugin_method(connection, event)
+            try:
+                plugin_method(connection, event)
+            except Exception as e:
+                connection.private_message(event.destination, str(e))

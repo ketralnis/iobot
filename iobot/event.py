@@ -52,4 +52,5 @@ class IrcEvent(object):
         m = re.match(regex, self.text)
         if m:
             self.command = m.group('command')
-            self.command_params = m.group('params')
+            self.command_params_raw = m.group('params')
+            self.command_params = self.command_params_raw.split()

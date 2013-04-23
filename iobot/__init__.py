@@ -19,5 +19,6 @@ def run_bot(config_path, loglevel):
         realname,
         loglevel
         )
+    ib.load_plugin('admin')
 
     IOLoop.instance().start()

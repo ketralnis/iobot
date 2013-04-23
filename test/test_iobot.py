@@ -31,7 +31,7 @@ class TestIrcConnection(AsyncTestCase):
         bot = mock.Mock()
         bot.loglevel = logging.DEBUG
         self.irc = IrcConnection(bot, 'test', 'localhost', 6667,
-                'testie', 'iobot', 'iobot')
+                'testie', 'iobot', 'iobot', 'owner')
         self.irc.connect()
         assert self.irc._stream.write.called
 

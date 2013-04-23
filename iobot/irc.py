@@ -4,25 +4,38 @@ from tornado.iostream import IOStream
 
 from iobot.event import IrcEvent
 from iobot.user import IrcUser
-from iobot.log import create_logger
+from logging import (getLogger, StreamHandler, Formatter,
+        LoggerAdapter)
+
+def wrap_logger(connection):
+    logger = getLogger(__name__)
+    logger.propagate = False
+    logger.setLevel(connection.bot.loglevel)
+    del logger.handlers[:]
+    handler = StreamHandler()
+    handler.setFormatter(Formatter(connection.log_format))
+    logger.addHandler(handler)
+    logger = LoggerAdapter(logger, {'server_name': connection.server_name})
+    return logger
 
 EOL = '\r\n'
 
 class IrcConnection(object):
     def __init__(self, bot, server_name, address, port, nick, user,
-            realname, channels=None):
+            realname, owner, channels=None):
         self.bot = bot
         self.server_name = server_name
+        self.owner = owner
         self.address = address
         self.port = port
         self.nick = nick
         self.user = user
         self.realname = realname
         self.initial_channels = set(channels) if channels else set()
-        self.log_format = ('%(asctime)s - %(levelname)s in %(module)s '
-                '[%(pathname)s:%(lineno)d]:\n%(message)s'.format(
-                self.server_name))
-        self.logger = create_logger(self)
+        self.log_format = ('%(asctime)s - %(levelname)s in %(module)s'
+                ' [%(pathname)s:%(lineno)d]:\n[%(server_name)s]'
+                ' %(message)s')
+        self.logger = wrap_logger(self)
 
         self._protocol_events = dict()
         self.channels = dict()
@@ -78,17 +91,29 @@ class IrcConnection(object):
         self.write_raw('NICK %s' % nick)
 
     def join_channel(self, *channels):
-        self.logger.info('JOINING CHANNEL(S): {channels: %s}' % channels)
+        self.logger.info('JOINING CHANNEL(S): {channels: %s}' % repr(channels))
         chan_def = ','.join(channels)
         self.write_raw('JOIN %s' % chan_def)
 
     def part_channel(self, channel):
-        self.logger.info('PARTING CHANNEL: {channels: %s}' % channel)
+        self.logger.info('PARTING CHANNEL: {channels: %s}' % repr(channel))
         self.write_raw('PART :%s' % channel)
 
     def private_message(self, destination, message):
         self.logger.info('SENDING PRIVMSG: {destination: %s, message: %s}' % (destination, message))
         self.write_raw('PRIVMSG %s :%s' % (destination, message))
+
+    def reply(self, event, message):
+        if event.destination and event.destination != self.nick:
+            destination = event.destination
+        else:
+            destination = event.nick
+        self.private_message(destination, message)
+
+    def reply_with_nick(self, event, message):
+        if event.destination:
+            message = '%s: %s' % (event.nick, message)
+        self.reply(event, message)
 
     def kick(self, channel, user, comment=None):
         self.logger.info('KICKING {channel: %s, user: %s}' % (channel, user))
