@@ -23,4 +23,5 @@ def admin_command(f):
                     'priveleges for %s' % nick))
             return
         return f(self, conn, event)
-    return update_wrapper(wrapper_func, f)
+    nf = update_wrapper(wrapper_func, f)
+    return plugin_command(nf)

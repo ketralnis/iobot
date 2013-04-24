@@ -2,6 +2,7 @@ import imp
 import os
 from logging import DEBUG
 
+from tornado.ioloop import IOLoop
 from iobot.irc import IrcConnection
 
 class DuplicatePluginHookWarning(Warning):
@@ -28,6 +29,8 @@ class IOBot(object):
         self.cmds = dict()
         self.loglevel = loglevel
 
+        self.ioloop = IOLoop.instance()
+
         for server_name, config in servers.items():
             conn = self.create_connection(server_name, config)
             conn.connect()
@@ -40,6 +43,9 @@ class IOBot(object):
         return IrcConnection(self, server_name, address, port,
                 self.nick, self.user, self.realname, owner,
                 channels)
+
+    def start(self):
+        self.ioloop.start()
 
     def register_plugins(self, plugin_names):
         """
@@ -126,4 +132,22 @@ class IOBot(object):
             try:
                 plugin_method(connection, event)
             except Exception as e:
-                connection.private_message(event.destination, str(e))
+                connection.reply(event, str(e))
+                connection.logger.error(e)
+
+    def process_hooks(self, connection, event):
+        try:
+            plugins = self._hooks.get(event.type)
+        except KeyError:
+            # hook does not exist
+            pass
+
+        if plugins:
+            for plugin in plugins:
+                plugin_method = getattr(plugin, 'on_%s' %
+                        str(event.type).lower())
+                try:
+                    plugin_method(connection, event)
+                except Exception as e:
+                    connection.reply(event, str(e))
+                    connection.logger.error(e)

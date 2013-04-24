@@ -144,6 +144,7 @@ class IrcConnection(object):
         cmd_char = self.bot.cmd_char
         event = IrcEvent(cmd_char, line)
         self.handle(event)
+        self.bot.process_hooks(self, event)
         self.bot.process_plugins(self, event)
         self._next()
 
@@ -213,7 +214,7 @@ class IrcConnection(object):
 
     def on_part(self, event):
         nick = event.nick
-        channel = event.destination
+        channel = event.destination or event.text
         self.logger.info('RECIEVED PART {channel: %s, nick: %s}' % (channel,
             nick))
         if event.nick == self.nick:
@@ -226,5 +227,5 @@ class IrcConnection(object):
         self.logger.info('RECIEVED KICK {channel: %s, nick: %s}' % (channel,
             nick))
         if event.parameters[0] == self.nick:
-            self.logger.warn('IOBot was KICKed from %s' % channel)
+            self.logger.warning('IOBot was KICKed from %s' % channel)
             self.remove_channel(channel)
