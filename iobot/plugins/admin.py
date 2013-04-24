@@ -1,58 +1,58 @@
 import traceback
-from iobot.plugins.decorators import plugin_command
+from iobot.plugins.decorators import admin_command
 
 class AdminPlugin(object):
-    @plugin_command
+    @admin_command
     def load(self, conn, event):
-        plugin_name = event.command_params[0]
+        admin_name = event.command_params[0]
         try:
-            conn.bot.load_plugin(plugin_name)
+            conn.bot.load_plugin(admin_name)
         except Exception:
-            conn.reply_with_nick(event, 'Error loading %s' % plugin_name)
+            conn.reply_with_nick(event, 'Error loading %s' % admin_name)
             tb = traceback.format_exc()
-            conn.logger.error('Error loading %s: %s' % (plugin_name, tb))
+            conn.logger.error('Error loading %s: %s' % (admin_name, tb))
         else:
-            conn.reply(event, 'Loaded %s' % plugin_name)
-            conn.logger.info('%s loaded %s' % (event.nick, plugin_name))
+            conn.reply(event, 'Loaded %s' % admin_name)
+            conn.logger.info('%s loaded %s' % (event.nick, admin_name))
 
-    @plugin_command
+    @admin_command
     def unload(self, conn, event):
-        plugin_name = event.command_params[0]
+        admin_name = event.command_params[0]
         try:
-            conn.bot.unload_plugin(plugin_name)
+            conn.bot.unload_plugin(admin_name)
         except KeyError:
-            conn.reply_with_nick(event, '%s is not loaded' % plugin_name)
+            conn.reply_with_nick(event, '%s is not loaded' % admin_name)
             conn.logger.info('Error unloading %s: Plugin not loaded')
         else:
-            conn.reply(event, 'Unloaded %s' % plugin_name)
-            conn.logger.info('%s unloaded %s' % (event.nick, plugin_name))
+            conn.reply(event, 'Unloaded %s' % admin_name)
+            conn.logger.info('%s unloaded %s' % (event.nick, admin_name))
 
-    @plugin_command
+    @admin_command
     def reload(self, conn, event):
-        plugin_name = event.command_params[0]
+        admin_name = event.command_params[0]
         try:
-            conn.bot.reload_plugin(plugin_name)
+            conn.bot.reload_plugin(admin_name)
         except KeyError:
-            conn.reply_with_nick(event, '%s is not loaded' % plugin_name)
+            conn.reply_with_nick(event, '%s is not loaded' % admin_name)
         except Exception:
-            conn.reply_with_nick(event, 'Error reloading %s' % plugin_name)
+            conn.reply_with_nick(event, 'Error reloading %s' % admin_name)
             tb = traceback.format_exc()
-            conn.logger.error('Error reloading %s: %s' % (plugin_name, tb))
+            conn.logger.error('Error reloading %s: %s' % (admin_name, tb))
         else:
-            conn.reply(event, 'Reloaded %s' % plugin_name)
-            conn.logger.info('%s reloaded %s' % (event.nick, plugin_name))
+            conn.reply(event, 'Reloaded %s' % admin_name)
+            conn.logger.info('%s reloaded %s' % (event.nick, admin_name))
 
-    @plugin_command
+    @admin_command
     def part(self, conn, event):
         channel = event.command_params[0]
         conn.part_channel(channel)
 
-    @plugin_command
+    @admin_command
     def join(self, conn, event):
         channel = event.command_params[0]
         conn.join_channel(channel)
 
-    @plugin_command
+    @admin_command
     def nick(self, conn, event):
         nick = event.command_params[0]
         conn.set_nick(nick)
