@@ -182,7 +182,7 @@ class IrcConnection(object):
             self.user_change_nick(old_nick, new_nick)
 
     def on_join(self, event):
-        channel = event.text or event.destination
+        channel = event.destination
         nick = event.nick
         self.logger.info('RECIEVED JOIN {channel: %s, nick: %s}' % (channel, nick))
         if self.nick == nick:
@@ -214,7 +214,7 @@ class IrcConnection(object):
 
     def on_part(self, event):
         nick = event.nick
-        channel = event.destination or event.text
+        channel = event.destination
         self.logger.info('RECIEVED PART {channel: %s, nick: %s}' % (channel,
             nick))
         if event.nick == self.nick:

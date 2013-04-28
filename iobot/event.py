@@ -9,7 +9,7 @@ class IrcEvent(object):
     COMMAND_REGEX = (r'^{}(?P<command>[^ ]*)'
             r'( (?P<params>.*))?$')
 
-    def __init__(self, cmd_char, raw):
+    def __init__(self, cmd_char, raw=None):
         self.cmd_char = cmd_char
         self.raw = raw
 
@@ -21,6 +21,7 @@ class IrcEvent(object):
         self.parameters_raw = None
         self.command = None
         self.command_params = None
+        self.command_params_raw = None
         if raw:
             self._parse()
 
@@ -47,6 +48,10 @@ class IrcEvent(object):
 
         if self.type == 'PRIVMSG':
             self._parse_command()
+        if self.type in ['JOIN', 'PART'] and not self.destination:
+            # rescue bad JOINS/PARTS a la gamesurge
+            # :iobot!iobot@host.name.com JOIN :#iobot-test
+            self.destination = self.text
 
     def _parse_command(self):
         regex = self.COMMAND_REGEX.format(re.escape(self.cmd_char))
@@ -54,5 +59,5 @@ class IrcEvent(object):
         if m:
             self.command = m.group('command')
             params_raw = m.group('params')
-            self.command_params_raw = params_raw
+            self.command_params_raw = params_raw or ''
             self.command_params = params_raw.split() if params_raw else []
