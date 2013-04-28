@@ -1,6 +1,5 @@
 import imp
 import os
-from logging import DEBUG
 
 from tornado.ioloop import IOLoop
 from iobot.irc import IrcConnection
@@ -83,10 +82,27 @@ class IOBot(object):
         # update to support custom paths?
         plugin_module = self.load_module(plugin_name)
         plugin_cls = plugin_module.Plugin
+        self.add_plugin(plugin_name, plugin_cls)
 
-        self.load_plugin_methods(plugin_cls)
-
+    def add_plugin(self, plugin_name, plugin_cls):
+        self.add_plugin_methods(plugin_cls)
         self._plugins[plugin_name] = plugin_cls
+
+    def add_plugin_methods(self, plugin_cls):
+        plugin = plugin_cls()
+        for attr_name in dir(plugin):
+            attr = getattr(plugin, attr_name)
+            if callable(attr):
+                self.add_plugin_method(attr_name, attr, plugin, plugin_cls)
+
+    def add_plugin_method(self, attr_name, attr, plugin, plugin_cls):
+        if hasattr(attr, 'cmd') and getattr(attr, 'cmd'):
+            if attr_name in self._commands:
+                raise CommandOverwrittenWarning
+            self._commands[attr_name] = plugin
+        elif hasattr(attr, 'hook') and getattr(attr, 'hook'):
+            hook_name = attr_name[3:]
+            self.add_hook(hook_name, plugin, plugin_cls)
 
     def add_hook(self, hook_name, plugin, plugin_cls):
         hook_name = hook_name.upper()
@@ -98,19 +114,6 @@ class IOBot(object):
         if any(isinstance(p, plugin_cls) for p in plugins):
             raise DuplicatePluginHookWarning
         plugins.append(plugin)
-
-    def load_plugin_methods(self, plugin_cls):
-        plugin = plugin_cls()
-        for attr_name in dir(plugin):
-            attr = getattr(plugin, attr_name)
-            if callable(attr):
-                if hasattr(attr, 'cmd') and getattr(attr, 'cmd'):
-                    if attr_name in self._commands:
-                        raise CommandOverwrittenWarning
-                    self._commands[attr_name] = plugin
-                elif hasattr(attr, 'hook') and getattr(attr, 'hook'):
-                    hook_name = attr_name[3:]
-                    self.add_hook(hook_name, plugin, plugin_cls)
 
     def load_module(self, plugin_name):
         # this will also reload a loaded module
