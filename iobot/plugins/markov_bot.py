@@ -70,7 +70,7 @@ class MarkovPlugin(object):
         elif not m and not self.dumb and not event.command:
             connection.logger.info('Learning {message: %s}' % event.text)
             message = event.text
-            tokens = word_tokenize(message)
+            tokens = tokenize_line(message)
             self.learn_message(tokens)
 
     def do_reply(self, connection, event, tokens):
@@ -111,7 +111,7 @@ class MarkovPlugin(object):
 word_pattern = re.compile(r'\w+')
 def tokenize_line(line):
     tokens = nltk.word_tokenize(line)
-    tokens = untokenize_special_characters(tokens, line)
+    return untokenize_special_characters(tokens, line)
 
 def untokenize_special_characters(tokens, line):
     repaired_tokens = []
