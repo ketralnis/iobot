@@ -35,10 +35,14 @@ class TestIrcConnection(AsyncTestCase):
         self.irc.connect()
         assert self.irc._stream.write.called
 
-    def test_nick(self):
+    def test_set_nick(self):
         nick = 'testnick'
         self.irc.set_nick(nick)
         assert self.irc._stream.write.called_with("NICK {}".format(nick))
+
+    def test_set_empty_nick(self):
+        from iobot.irc import IrcError
+        self.assertRaises(IrcError, self.irc.set_nick, '')
 
     def test_join(self):
         # testing these together
@@ -46,11 +50,19 @@ class TestIrcConnection(AsyncTestCase):
         self.irc.join_channel(chan)
         assert self.irc._stream.write.called_with("JOIN :{}".format(chan))
 
+    def test_join_empty_channel_name(self):
+        from iobot.irc import IrcError
+        self.assertRaises(IrcError, self.irc.join_channel, '')
+
     def test_part(self):
         # testing these together
         chan = '#testchan'
         self.irc.part_channel(chan)
         assert self.irc._stream.write.called_with("PART :{}".format(chan))
+
+    def test_part_empty_channel_name(self):
+        from iobot.irc import IrcError
+        self.assertRaises(IrcError, self.irc.part_channel, '')
 
     def test_kick(self):
         chan = '#testchan'
@@ -65,6 +77,14 @@ class TestIrcConnection(AsyncTestCase):
         self.irc._stream.write.assert_called_with(
                 "PRIVMSG {} :{}\r\n".format(chan, msg)
                 )
+
+    def test_priv_msg_empty_message(self):
+        from iobot.irc import IrcError
+        self.assertRaises(IrcError, self.irc.private_message, '', '')
+
+    def test_priv_msg_empty_destination(self):
+        from iobot.irc import IrcError
+        self.assertRaises(IrcError, self.irc.private_message, '', 'abc')
 
     def test_ping(self):
         # going to fake a PING from the server on this one

@@ -96,11 +96,15 @@ class IrcConnection(object):
         self.write_raw('NICK %s' % nick)
 
     def join_channel(self, *channels):
+        if not all([c for c in channels]):
+            raise IrcError('Empty channel')
         self.logger.info('JOINING CHANNEL(S): {channels: %s}' % repr(channels))
         chan_def = ','.join(channels)
         self.write_raw('JOIN %s' % chan_def)
 
     def part_channel(self, *channels):
+        if not all([c for c in channels]):
+            raise IrcError('Empty channel')
         self.logger.info('PARTING CHANNEL: {channels: %s}' % repr(channels))
         chan_def = ','.join(channels)
         self.write_raw('PART :%s' % chan_def)
@@ -108,6 +112,8 @@ class IrcConnection(object):
     def private_message(self, destination, message):
         if not message:
             raise IrcError('Cannot send empty message')
+        if not destination:
+            raise IrcError('Cannot send to empty destination')
         self.logger.info('SENDING PRIVMSG: {destination: %s, message: %s}' % (destination, message))
         self.write_raw('PRIVMSG %s :%s' % (destination, message))
 
