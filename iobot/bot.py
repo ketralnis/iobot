@@ -1,5 +1,6 @@
 import imp
 import os
+from warnings import warn
 
 from tornado.ioloop import IOLoop
 from iobot.irc import IrcConnection
@@ -98,7 +99,7 @@ class IOBot(object):
     def add_plugin_method(self, attr_name, attr, plugin, plugin_cls):
         if hasattr(attr, 'cmd') and getattr(attr, 'cmd'):
             if attr_name in self._commands:
-                raise CommandOverwrittenWarning
+                warn('Command overwritten', CommandOverwrittenWarning)
             self._commands[attr_name] = plugin
         elif hasattr(attr, 'hook') and getattr(attr, 'hook'):
             hook_name = attr_name[3:]
