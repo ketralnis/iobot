@@ -208,7 +208,12 @@ class IrcConnection(object):
         self.logger.info('RECIEVED NAMES {channel: %s, nick_count: %d}' % (
             channel, len(nicks)))
         for nr in nicks:
-            nick = nr if nr[0] != '@' and nr[0] != '+' else nr[1:]
+            if nr[0] == '@':
+                nick = nr[1:]
+            elif nr[0] == '+':
+                nick = nr[1:]
+            else:
+                nick = nr
             user = IrcUser(nick)
             self.add_user(channel, user)
 
