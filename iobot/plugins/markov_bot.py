@@ -1,5 +1,5 @@
-from re import match
-from nltk import word_tokenize
+import re
+import nltk
 from datetime import timedelta
 from operator import itemgetter
 from random import sample, randint
@@ -61,9 +61,9 @@ class MarkovPlugin(object):
             self.do_throttle(connection.bot.ioloop, user, timedelta(minutes=1))
             return
 
-        m = match(QUERY_REGEX.format(connection.nick), event.text)
+        m = re.match(QUERY_REGEX.format(connection.nick), event.text)
         if not self.silent and m:
-            tokens = word_tokenize(m.group('message'))
+            tokens = tokenize_line(m.group('message'))
             self.do_reply(connection, event, tokens)
             ioloop = connection.bot.ioloop
             self.do_throttle(ioloop, user)
@@ -77,7 +77,7 @@ class MarkovPlugin(object):
         connection.logger.info('Loading reply {tokens: %s}' % repr(tokens))
         reply = load_reply_from_markov(self.markov, event.nick, tokens)
         if reply:
-            connection.reply_with_nick(event, ' '.join(reply))
+            connection.reply_with_nick(event, reply)
         else:
             connection.reply_with_nick(event, ('I have nothing to'
                 ' say yet. Teach me more!'))
@@ -108,6 +108,37 @@ class MarkovPlugin(object):
     def learn_message(self, tokens):
         self.markov.add_line_to_index(tokens)
 
+word_pattern = re.compile(r'\w+')
+def tokenize_line(line):
+    tokens = nltk.word_tokenize(line)
+    tokens = untokenize_special_characters(tokens, line)
+
+def untokenize_special_characters(tokens, line):
+    repaired_tokens = []
+    pos = 0
+    while pos < len(tokens):
+        token = tokens[pos]
+        if (not word_pattern.match(token) and
+                not re.search(r'\s%s\s' % token, line)):
+            if re.search(r'\s%s' % token, line):
+                token = token + tokens[pos + 1]
+                repaired_tokens.append(token)
+                pos += 2
+            elif re.search(r'%s\s' % token, line):
+                prev_token = repaired_tokens[-1]
+                repaired_tokens[-1] = prev_token + token
+                pos += 1
+            else:
+                prev_token = repaired_tokens[-1]
+                repaired_tokens[-1] = prev_token + token
+                if len(tokens) > pos + 1:
+                    required_tokens[-1] += tokens[pos + 1]
+                pos += 2
+        else:
+            repaired_tokens.append(token)
+            pos += 1
+    return repaired_tokens
+
 def load_reply_from_markov(markov, nick, tokens):
     tokens.append(nick)
     replies = dict()
@@ -120,6 +151,7 @@ def load_reply_from_markov(markov, nick, tokens):
             possible_reply = markov.generate()
         score = markov.score_for_line(possible_reply)
         replies[tuple(possible_reply)] = score
-    return max(replies.iteritems(), key=itemgetter(1))[0]
+    reply = max(replies.iteritems(), key=itemgetter(1))[0]
+    return ' '.join(reply)
 
 Plugin = MarkovPlugin
