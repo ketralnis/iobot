@@ -40,9 +40,10 @@ class IOBot(object):
         port = config['port']
         channels = config.get('channels', [])
         owner = config['owner']
+        password = config.get('password')
         return IrcConnection(self, server_name, address, port,
                 self.nick, self.user, self.realname, owner,
-                channels)
+                channels, password=password)
 
     def start(self):
         self.ioloop.start()

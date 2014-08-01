@@ -4,19 +4,7 @@ from tornado.iostream import IOStream
 
 from iobot.event import IrcEvent
 from iobot.user import IrcUser
-from logging import (getLogger, StreamHandler, Formatter,
-        LoggerAdapter)
-
-def wrap_logger(connection):
-    logger = getLogger(__name__)
-    logger.propagate = False
-    logger.setLevel(connection.bot.loglevel)
-    del logger.handlers[:]
-    handler = StreamHandler()
-    handler.setFormatter(Formatter(connection.log_format))
-    logger.addHandler(handler)
-    logger = LoggerAdapter(logger, {'server_name': connection.server_name})
-    return logger
+from logging import getLogger
 
 class IrcError(Exception):
     pass
@@ -25,7 +13,7 @@ EOL = '\r\n'
 
 class IrcConnection(object):
     def __init__(self, bot, server_name, address, port, nick, user,
-            realname, owner, channels=None):
+            realname, owner, channels=None, password=None):
         self.bot = bot
         self.server_name = server_name
         self.owner = owner
@@ -33,12 +21,11 @@ class IrcConnection(object):
         self.port = port
         self.nick = nick
         self.user = user
+        self.password = password
         self.realname = realname
         self.initial_channels = set(channels) if channels else set()
-        self.log_format = ('%(asctime)s - %(levelname)s in %(module)s'
-                ' [%(pathname)s:%(lineno)d]:\n[%(server_name)s]'
-                ' %(message)s')
-        self.logger = wrap_logger(self)
+
+        self.logger = getLogger(__name__)
 
         self._protocol_events = dict()
         self.channels = dict()
@@ -65,8 +52,13 @@ class IrcConnection(object):
         self._stream.connect((self.address, self.port), self._register)
 
     def _register(self):
+        if self.password:
+            # TODO need to check for error responses
+            self.authenticate()
+
         self.set_nick(self.nick)
         self.write_raw('USER %s 0 * :%s' % (self.user, self.realname))
+
 
         self._next()
 
@@ -88,6 +80,10 @@ class IrcConnection(object):
         user = self.users.pop(old_nick)
         user.nick = new_nick
         self.users[new_nick] = user
+
+    def authenticate(self):
+        self.logger.info("Authenticating (%s)", self.password)
+        self.write_raw('PASS %s' % self.password)
 
     def set_nick(self, nick):
         if not nick:
