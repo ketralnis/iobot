@@ -1,6 +1,7 @@
 import socket
 
 from tornado.iostream import IOStream
+from tornado.iostream import SSLIOStream
 
 from iobot.event import IrcEvent
 from iobot.user import IrcUser
@@ -13,7 +14,7 @@ EOL = '\r\n'
 
 class IrcConnection(object):
     def __init__(self, bot, server_name, address, port, nick, user,
-            realname, owner, channels=None, password=None):
+            realname, owner, channels=None, password=None, ssl=None):
         self.bot = bot
         self.server_name = server_name
         self.owner = owner
@@ -22,6 +23,7 @@ class IrcConnection(object):
         self.nick = nick
         self.user = user
         self.password = password
+        self.ssl = ssl
         self.realname = realname
         self.initial_channels = set(channels) if channels else set()
 
@@ -48,17 +50,25 @@ class IrcConnection(object):
     def connect(self, reconnecting=False):
         self.logger.info('CONNECTING...')
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-        self._stream = IOStream(_sock)
+
+        if self.ssl is None:
+            self._stream = IOStream(_sock)
+        elif self.ssl is True:
+            self._stream = SSLIOStream(_sock)
+        else:
+            self._stream = SSLIOStream(_sock, ssl_options=self.ssl)
+
         self._stream.connect((self.address, self.port), self._register)
 
     def _register(self):
+        self.logger.info('CONNECTED')
+
         if self.password:
             # TODO need to check for error responses
             self.authenticate()
 
         self.set_nick(self.nick)
         self.write_raw('USER %s 0 * :%s' % (self.user, self.realname))
-
 
         self._next()
 
