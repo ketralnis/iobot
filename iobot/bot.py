@@ -12,7 +12,7 @@ class CommandOverwirttenWarning(Warning):
     pass
 
 class IOBot(object):
-    def __init__(self, servers, cmd_char, nick, user, realname, loglevel):
+    def __init__(self, servers, cmd_char, nick, user, realname):
         """
         create an irc bot instance.
         @params
@@ -27,7 +27,6 @@ class IOBot(object):
         self._hooks = dict()
         # build our user command list
         self.cmds = dict()
-        self.loglevel = loglevel
 
         self.ioloop = IOLoop.instance()
 

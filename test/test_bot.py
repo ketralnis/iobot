@@ -3,7 +3,7 @@ from unittest import TestCase
 class TestIOBot(TestCase):
     def setUp(self):
         from iobot.bot import IOBot
-        self.bot = IOBot({}, ';', 'bot', 'bot', 'bot', 100)
+        self.bot = IOBot({}, ';', 'bot', 'bot', 'bot')
 
     def test_create_connection(self):
         pass

@@ -29,7 +29,6 @@ class TestIrcConnection(AsyncTestCase):
         from iobot.irc import IrcConnection
         super(TestIrcConnection, self).setUp()
         bot = mock.Mock()
-        bot.loglevel = logging.DEBUG
         self.irc = IrcConnection(bot, 'test', 'localhost', 6667,
                 'testie', 'iobot', 'iobot', 'owner')
         self.irc.connect()

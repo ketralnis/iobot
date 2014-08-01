@@ -48,7 +48,7 @@ class IrcConnection(object):
         }
 
     def connect(self, reconnecting=False):
-        self.logger.info('CONNECTING...')
+        self.logger.debug('CONNECTING...')
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
 
         if self.ssl is None:
@@ -61,7 +61,7 @@ class IrcConnection(object):
         self._stream.connect((self.address, self.port), self._register)
 
     def _register(self):
-        self.logger.info('CONNECTED')
+        self.logger.debug('CONNECTED')
 
         if self.password:
             # TODO need to check for error responses
@@ -92,26 +92,26 @@ class IrcConnection(object):
         self.users[new_nick] = user
 
     def authenticate(self):
-        self.logger.info("Authenticating (%s)", self.password)
+        self.logger.debug("Authenticating (%s)", self.password)
         self.write_raw('PASS %s' % self.password)
 
     def set_nick(self, nick):
         if not nick:
             raise IrcError('Cannot set empty nick')
-        self.logger.info('SETTING NICK {nick: %s}' % nick)
+        self.logger.debug('SETTING NICK {nick: %s}' % nick)
         self.write_raw('NICK %s' % nick)
 
     def join_channel(self, *channels):
         if not all([c for c in channels]):
             raise IrcError('Empty channel')
-        self.logger.info('JOINING CHANNEL(S): {channels: %s}' % repr(channels))
+        self.logger.debug('JOINING CHANNEL(S): {channels: %s}' % repr(channels))
         chan_def = ','.join(channels)
         self.write_raw('JOIN %s' % chan_def)
 
     def part_channel(self, *channels):
         if not all([c for c in channels]):
             raise IrcError('Empty channel')
-        self.logger.info('PARTING CHANNEL: {channels: %s}' % repr(channels))
+        self.logger.debug('PARTING CHANNEL: {channels: %s}' % repr(channels))
         chan_def = ','.join(channels)
         self.write_raw('PART :%s' % chan_def)
 
@@ -120,7 +120,7 @@ class IrcConnection(object):
             raise IrcError('Cannot send empty message')
         if not destination:
             raise IrcError('Cannot send to empty destination')
-        self.logger.info('SENDING PRIVMSG: {destination: %s, message: %s}' % (destination, message))
+        self.logger.debug('SENDING PRIVMSG: {destination: %s, message: %s}' % (destination, message))
         self.write_raw('PRIVMSG %s :%s' % (destination, message))
 
     def reply(self, event, message):
@@ -140,7 +140,7 @@ class IrcConnection(object):
             raise IrcError('Cannot kick from empty channel')
         if not user:
             raise IrcError('Cannot kick empty player')
-        self.logger.info('KICKING {channel: %s, user: %s}' % (channel, user))
+        self.logger.debug('KICKING {channel: %s, user: %s}' % (channel, user))
         kick_str = 'KICK %s %s' % (channel, user)
         if comment:
             kick_str += ' :%s' % comment
@@ -167,25 +167,25 @@ class IrcConnection(object):
         self._stream.read_until(EOL, self.read_raw)
 
     def on_welcome(self, event):
-        self.logger.info('RECIEVED RPL_WELCOME')
+        self.logger.debug('RECIEVED RPL_WELCOME')
         if self.initial_channels:
             self.join_channel(*self.initial_channels)
 
     def on_ping(self, event):
         # One ping only, please
-        self.logger.info('RECIEVED PING')
+        self.logger.debug('RECIEVED PING')
         self.write_raw("PONG %s\r\n" % event.text)
 
     def on_privmsg(self, event):
         # :nod!~nod@crunchy.bueno.land PRIVMSG #xx :hi
-        self.logger.info('RECIEVED PRIVMSG {destination: %s,'
+        self.logger.debug('RECIEVED PRIVMSG {destination: %s,'
                 ' message: %s}' % (event.destination, event.text))
         pass
 
     def on_nick(self, event):
         old_nick = event.nick
         new_nick = event.text
-        self.logger.info('RECIEVED NICK {old_nick: %s, new_nick: %s}' %
+        self.logger.debug('RECIEVED NICK {old_nick: %s, new_nick: %s}' %
                 (old_nick, new_nick))
         if event.nick == self.nick:
             self.nick = new_nick
@@ -195,7 +195,7 @@ class IrcConnection(object):
     def on_join(self, event):
         channel = event.destination
         nick = event.nick
-        self.logger.info('RECIEVED JOIN {channel: %s, nick: %s}' % (channel, nick))
+        self.logger.debug('RECIEVED JOIN {channel: %s, nick: %s}' % (channel, nick))
         if self.nick == nick:
             self.add_channel(channel)
         else:
@@ -210,7 +210,7 @@ class IrcConnection(object):
             channel = nick_chan.split('=')[-1].strip()
         else:
             raise Exception
-        self.logger.info('RECIEVED NAMES {channel: %s, nick_count: %d}' % (
+        self.logger.debug('RECIEVED NAMES {channel: %s, nick_count: %d}' % (
             channel, len(nicks)))
         for nr in nicks:
             if nr[0] == '@':
@@ -224,23 +224,23 @@ class IrcConnection(object):
 
     def on_nochan(self, event):
         channel = event.parameters[0]
-        self.logger.info('RECIEVED ERR_NOSUCHCHANNEL {channel: %s}' % channel)
+        self.logger.debug('RECIEVED ERR_NOSUCHCHANNEL {channel: %s}' % channel)
         # :senor.crunchybueno.com 401 nodnc  #xx :No such nick/channel
         self.remove_channel(channel)
 
     def on_part(self, event):
         nick = event.nick
         channel = event.destination
-        self.logger.info('RECIEVED PART {channel: %s, nick: %s}' % (channel,
+        self.logger.debug('RECIEVED PART {channel: %s, nick: %s}' % (channel,
             nick))
         if event.nick == self.nick:
-            self.logger.info('IOBot parted from %s' % channel)
+            self.logger.debug('IOBot parted from %s' % channel)
             self.remove_channel(channel)
 
     def on_kick(self, event):
         nick = event.parameters[0]
         channel = event.destination
-        self.logger.info('RECIEVED KICK {channel: %s, nick: %s}' % (channel,
+        self.logger.debug('RECIEVED KICK {channel: %s, nick: %s}' % (channel,
             nick))
         if event.parameters[0] == self.nick:
             self.logger.warning('IOBot was KICKed from %s' % channel)

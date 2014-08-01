@@ -1,7 +1,7 @@
 from iobot.bot import IOBot
 from iobot.config import read_config
 
-def run_bot(config_path, loglevel):
+def run_bot(config_path):
     config = read_config(config_path)
     servers = config['servers']
     prefix = config['core']['prefix']
@@ -14,7 +14,6 @@ def run_bot(config_path, loglevel):
         nick,
         user,
         realname,
-        loglevel
         )
     ib.load_plugin('admin')
     ib.load_plugin('markov_bot')
