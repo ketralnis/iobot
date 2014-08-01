@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 class TestIrcEvent(TestCase):
-    def makeOne(self, line, cmd_char=';'):
+    def makeOne(self, line, my_nick='david'):
         from iobot.event import IrcEvent
-        return IrcEvent(';', line)
+        return IrcEvent(my_nick, line)
 
     def test_parse_privmsg(self):
         e = self.makeOne((':bot!bot@host.name.com'
@@ -21,12 +21,26 @@ class TestIrcEvent(TestCase):
 
     def test_parse_privmsg_command(self):
         e = self.makeOne((':bot!bot@host.name.com'
-                ' PRIVMSG #bot :;beep'))
+                ' PRIVMSG #bot :david: beep'))
         self.assertEqual(e.origin, 'bot!bot@host.name.com')
         self.assertEqual(e.nick, 'bot')
         self.assertEqual(e.user, 'bot')
         self.assertEqual(e.host, 'host.name.com')
-        self.assertEqual(e.text, ';beep')
+        self.assertEqual(e.text, 'david: beep')
+        self.assertEqual(e.destination, '#bot')
+        self.assertEqual(e.type, 'PRIVMSG')
+        self.assertEqual(e.command, 'beep')
+        self.assertEqual(e.command_params, [])
+        self.assertEqual(e.command_params_raw, '')
+
+    def test_parse_privmsg_command_all(self):
+        e = self.makeOne((':bot!bot@host.name.com'
+                ' PRIVMSG #bot :all: beep'))
+        self.assertEqual(e.origin, 'bot!bot@host.name.com')
+        self.assertEqual(e.nick, 'bot')
+        self.assertEqual(e.user, 'bot')
+        self.assertEqual(e.host, 'host.name.com')
+        self.assertEqual(e.text, 'all: beep')
         self.assertEqual(e.destination, '#bot')
         self.assertEqual(e.type, 'PRIVMSG')
         self.assertEqual(e.command, 'beep')
@@ -35,12 +49,12 @@ class TestIrcEvent(TestCase):
 
     def test_parse_privmsg_command_with_params(self):
         e = self.makeOne((':bot!bot@host.name.com'
-                ' PRIVMSG #bot :;beep bep boop'))
+                ' PRIVMSG #bot :david: beep bep boop'))
         self.assertEqual(e.origin, 'bot!bot@host.name.com')
         self.assertEqual(e.nick, 'bot')
         self.assertEqual(e.user, 'bot')
         self.assertEqual(e.host, 'host.name.com')
-        self.assertEqual(e.text, ';beep bep boop')
+        self.assertEqual(e.text, 'david: beep bep boop')
         self.assertEqual(e.destination, '#bot')
         self.assertEqual(e.type, 'PRIVMSG')
         self.assertEqual(e.command, 'beep')

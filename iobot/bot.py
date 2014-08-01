@@ -126,7 +126,7 @@ class IOBot(object):
         return module
 
     def process_plugins(self, connection, event):
-        """ parses a completed ircEvent for module hooks """
+        """ parses a completed IrcEvent for module hooks """
         try:
             plugin = self._commands.get(event.command) if event.command else None
         except KeyError:

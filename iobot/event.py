@@ -6,13 +6,14 @@ class IrcEvent(object):
             r'((?P<numeric>[0-9]{3})|(?P<command>[^ ]+))'
             r'( (?P<destination>[^:][^ ]*))?( :(?P<text>.*)|'
             r' (?P<parameters>.*))?$'))
-    COMMAND_REGEX = (r'^{}(?P<command>[^ ]*)'
+
+    COMMAND_REGEX = re.compile(r'^(?P<target>[^ ]+): ?(?P<command>[^ ]*)'
             r'( (?P<params>.*))?$')
 
-    def __init__(self, cmd_char, raw=None):
-        self.cmd_char = cmd_char
+    def __init__(self, my_nick, raw=None):
         self.raw = raw
 
+        self.my_nick = my_nick
         self.type = None
         self.origin = None
         self.destination = None
@@ -54,9 +55,8 @@ class IrcEvent(object):
             self.destination = self.text
 
     def _parse_command(self):
-        regex = self.COMMAND_REGEX.format(re.escape(self.cmd_char))
-        m = re.match(regex, self.text)
-        if m:
+        m = self.COMMAND_REGEX.match(self.text)
+        if m and m.group('target') in (self.my_nick, 'all'):
             self.command = m.group('command')
             params_raw = m.group('params')
             self.command_params_raw = params_raw or ''

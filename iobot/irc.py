@@ -153,8 +153,7 @@ class IrcConnection(object):
 
     def read_raw(self, line):
         self.logger.debug('READ RAW: {line: %s}' % line.replace(EOL, ''))
-        cmd_char = self.bot.cmd_char
-        event = IrcEvent(cmd_char, line)
+        event = IrcEvent(self.nick, line)
         self.handle(event)
         self.bot.process_hooks(self, event)
         self.bot.process_plugins(self, event)
