@@ -14,10 +14,10 @@ EOL = '\r\n'
 
 class IrcConnection(object):
     def __init__(self, bot, server_name, address, port, nick, user,
-            realname, owner, channels=None, password=None, ssl=None):
+            realname, owners, channels=None, password=None, ssl=None):
         self.bot = bot
         self.server_name = server_name
-        self.owner = owner
+        self.owners = owners
         self.address = address
         self.port = port
         self.nick = nick

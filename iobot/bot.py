@@ -38,11 +38,11 @@ class IOBot(object):
         address = config['address']
         port = config['port']
         channels = config.get('channels', [])
-        owner = config['owner']
+        owners = config['owners']
         password = config.get('password')
         ssl = config.get('ssl')
         return IrcConnection(self, server_name, address, port,
-                self.nick, self.user, self.realname, owner,
+                self.nick, self.user, self.realname, owners,
                 channels, password=password, ssl=ssl)
 
     def start(self):

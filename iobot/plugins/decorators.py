@@ -16,11 +16,11 @@ def plugin_hook(f):
 
 def admin_command(f):
     def wrapper_func(self, conn, event):
-        if event.nick != conn.owner:
+        if event.nick not in conn.owners:
             channel = event.destination
             nick = event.nick
-            conn.private_message(channel, ('Error: Insufficent '
-                    'priveleges for %s' % nick))
+            conn.private_message(channel,
+                                 'Error: Insufficient privileges for %s' % nick)
             return
         return f(self, conn, event)
     nf = update_wrapper(wrapper_func, f)
